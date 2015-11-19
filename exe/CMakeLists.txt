@@ -1,7 +1,4 @@
 # Generate source files from a template based on the project name.
-# REMOVE after generating your project.
-configure_file("driver.cc.in" "${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.cc")
-# REMOVE end
 
 # Set C++ compile flags based on project settings.
 set(CMAKE_CXX_FLAGS ${${PROJECT_NAME_UPPER}_CXX_FLAGS})

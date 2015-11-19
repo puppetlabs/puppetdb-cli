@@ -7,12 +7,12 @@
 #include <string>
 #include "export.h"
 
-namespace @PROJECT_NAME_LOWER@ {
+namespace puppetdb_cli {
 
     /**
      * Query the library version.
      * @return A version string with \<major>.\<minor>.\<patch>
      */
-    std::string LIB@PROJECT_NAME_UPPER@_EXPORT version();
+    std::string LIBPUPPETDB_CLI_EXPORT version();
 
-}  // namespace @PROJECT_NAME_LOWER@
+}  // namespace puppetdb_cli

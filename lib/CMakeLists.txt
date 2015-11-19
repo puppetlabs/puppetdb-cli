@@ -1,8 +1,4 @@
 # Generate source files from a template based on the project name.
-# REMOVE after generating your project.
-configure_file("project.hpp.in" "${CMAKE_CURRENT_LIST_DIR}/inc/${PROJECT_NAME}/${PROJECT_NAME}.hpp")
-configure_file("project.cc.in"  "${CMAKE_CURRENT_LIST_DIR}/src/${PROJECT_NAME}.cc")
-# REMOVE end
 
 include(leatherman)
 get_commit_string(PROJECT_COMMIT)

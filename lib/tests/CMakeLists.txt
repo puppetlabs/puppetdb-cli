@@ -1,7 +1,4 @@
 # Generate source files from a template based on the project name.
-# REMOVE after generating your project.
-configure_file("test.cc.in" "${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.cc")
-# REMOVE end
 
 # Setup compiling the test executable. C++ compile flags are inherited from the parent directory.
 include_directories(${LEATHERMAN_CATCH_INCLUDE})
