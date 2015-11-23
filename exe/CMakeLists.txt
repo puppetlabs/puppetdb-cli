@@ -22,9 +22,12 @@ target_link_libraries(${PROJECT_NAME}
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
-# Tests for the executable. These don't verify behavior, simply that the executable runs
-# without crashing or generating an error. Useful, but should be enhanced with test scripts
-# and/or acceptance tests.
-add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME})
+# Tests for the executable. These don't verify behavior, simply that the
+# executable runs without crashing or generating an error. Useful, but should be
+# enhanced with test scripts and/or acceptance tests.
+
+# We duplicate the `help_test` as `smoke_test` until the default functionality
+# of the tool has been nailed down.
+add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME} --help)
 add_test(NAME "help_test" COMMAND ${PROJECT_NAME} --help)
 add_test(NAME "version_test" COMMAND ${PROJECT_NAME} --version)
