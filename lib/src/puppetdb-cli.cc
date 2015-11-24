@@ -38,9 +38,9 @@ namespace puppetdb_cli {
 
     curl::response query(const JsonContainer& config,
                          const string& endpoint,
-                         const string& query_string,
+                         const JsonContainer& query,
                          const int limit,
-                         const string& order_by_string) {
+                         const JsonContainer& order_by) {
       curl::client client;
       auto cacert = config.getWithDefault<string>("cacert", "");
       auto cert = config.getWithDefault<string>("cert", "");
@@ -51,17 +51,9 @@ namespace puppetdb_cli {
       auto root_url = config.getWithDefault<string>("server_urls", "http://127.0.0.1:8080");
 
       JsonContainer request_body;
-      if (!query_string.empty()) {
-        JsonContainer query_json(query_string);
-        request_body.set("query", query_json);
-      }
-      if (limit > 0) {
-        request_body.set("limit", limit);
-      }
-      if (!order_by_string.empty()) {
-        JsonContainer order_by_json(order_by_string);
-        request_body.set("order_by", order_by_json);
-      }
+      if (!query.empty()) request_body.set("query", query);
+      if (limit > 0) request_body.set("limit", limit);
+      if (!order_by.empty()) request_body.set("order_by", order_by);
 
       curl::request request(root_url + "/pdb/query/v4/" + endpoint);
       request.body(request_body.toString(), "application/json");

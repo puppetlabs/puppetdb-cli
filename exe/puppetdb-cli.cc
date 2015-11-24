@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
         po::options_description paging_options("paging options");
         paging_options.add_options()
           ("limit", po::value<int>()->default_value(-1), "limit paging option for PuppetDB")
-          ("order-by", po::value<string>()->default_value(""), "order-by paging option for PuppetDB");
+          ("order-by", po::value<string>()->default_value("[]"), "order-by paging option for PuppetDB");
 
         po::variables_map vm;
 
@@ -85,7 +85,11 @@ int main(int argc, char **argv) {
             // Collect all the unrecognized options from the first pass. This will include the
             // (positional) command name, so we need to erase that.
             vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
-            opts.erase(opts.begin(), opts.begin() + 2);
+            if (vm["query"].as<string>().empty()) {
+              opts.erase(opts.begin());
+            } else {
+              opts.erase(opts.begin(), opts.begin() + 2);
+            }
             po::store(po::command_line_parser(opts).options(paging_options).run(), vm);
 
             po::notify(vm);
@@ -102,9 +106,10 @@ int main(int argc, char **argv) {
         set_level(lvl);
 
         auto endpoint = vm["context"].as<string>();
-        auto query = vm["query"].as<string>();
         auto limit = vm["limit"].as<int>();
-        auto order_by = vm["order-by"].as<string>();
+        auto query_str = vm["query"].as<string>();
+        JsonContainer query{ !query_str.empty() ? query_str : "{}" };
+        JsonContainer order_by(vm["order-by"].as<string>());
 
         auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), endpoint, query, limit, order_by);
         if (response.status_code() >= 200 && response.status_code() < 300) {
