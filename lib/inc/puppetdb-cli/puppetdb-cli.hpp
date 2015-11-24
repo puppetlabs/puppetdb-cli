@@ -8,6 +8,7 @@
 #include "export.h"
 
 #include <leatherman/json_container/json_container.hpp>
+#include <leatherman/curl/response.hpp>
 
 namespace puppetdb_cli {
 
@@ -19,22 +20,26 @@ namespace puppetdb_cli {
     std::string LIBPUPPETDB_CLI_EXPORT version();
 
     /**
-    * Parse a `puppetdb-cli` config at `~/.pdbrc`.
-    * @return A JsonContainer of the config.
-    */
-    leatherman::json_container::JsonContainer LIBPUPPETDB_CLI_EXPORT parse_config();
+     * Parse a `puppetdb-cli` config at `~/.pdbrc`.
+     * @return A JsonContainer of the config.
+     */
+    leatherman::json_container::JsonContainer LIBPUPPETDB_CLI_EXPORT
+    parse_config();
 
     /**
      * Query a PuppetDB endpoint for a given config.
      * @param config JsonContainer of the cli configuration.
      * @param endpoint string of the PuppetDB endpoint to query.
      * @param query_string JSON encoded string to query PuppetDB with.
-     * @param limit integer paging option for PuppetDB query
+     * @param limit integer paging option for PuppetDB query.
+     * @param order_by JSON encoded string paging option for PuppetDB query.
      * @return A string of the response from a PuppetDB query.
      */
-    std::string LIBPUPPETDB_CLI_EXPORT query(const leatherman::json_container::JsonContainer& config,
-                                             const std::string& endpoint,
-                                             const std::string& query_string,
-                                             const int limit);
+    leatherman::curl::response LIBPUPPETDB_CLI_EXPORT
+    query(const leatherman::json_container::JsonContainer& config,
+          const std::string& endpoint,
+          const std::string& query_string,
+          const int limit,
+          const std::string& order_by_string);
 
 }  // namespace puppetdb_cli

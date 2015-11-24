@@ -36,10 +36,11 @@ namespace puppetdb_cli {
       }
     }
 
-    string query(const JsonContainer& config,
-                 const string& endpoint,
-                 const string& query_string,
-                 const int limit) {
+    curl::response query(const JsonContainer& config,
+                         const string& endpoint,
+                         const string& query_string,
+                         const int limit,
+                         const string& order_by_string) {
       curl::client client;
       auto cacert = config.getWithDefault<string>("cacert", "");
       auto cert = config.getWithDefault<string>("cert", "");
@@ -57,13 +58,15 @@ namespace puppetdb_cli {
       if (limit > 0) {
         request_body.set("limit", limit);
       }
+      if (!order_by_string.empty()) {
+        JsonContainer order_by_json(order_by_string);
+        request_body.set("order_by", order_by_json);
+      }
 
       curl::request request(root_url + "/pdb/query/v4/" + endpoint);
       request.body(request_body.toString(), "application/json");
 
-      curl::response response { client.post(request) };
-      JsonContainer response_body(response.body());
-      return response_body.toString();
+      return client.post(request);
     }
 
 }  // puppetdb_cli

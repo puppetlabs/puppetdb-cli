@@ -2,6 +2,7 @@
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
 #include <leatherman/logging/logging.hpp>
+#include <leatherman/curl/response.hpp>
 
 // boost includes are not always warning-clean. Disable warnings that
 // cause problems before including the headers, then re-enable the warnings.
@@ -12,27 +13,15 @@
 
 using namespace std;
 using namespace leatherman::logging;
+using leatherman::json_container::JsonContainer;
 namespace po = boost::program_options;
+namespace curl = leatherman::curl;
 
-void help(po::options_description& desc)
+void help(po::options_description& global_desc, po::options_description& paging_desc)
 {
-    boost::nowide::cout <<
-        "Synopsis\n"
-        "========\n"
-        "\n"
-        "Example command-line utility.\n"
-        "\n"
-        "Usage\n"
-        "=====\n"
-        "\n"
-        "  puppetdb-cli [options] context query [paging-options]\n"
-        "\n"
-        "Options\n"
-        "=======\n\n" << desc <<
-        "\nDescription\n"
-        "===========\n"
-        "\n"
-        "Displays its own version string." << endl;
+        boost::nowide::cout <<
+            "usage: puppetdb-cli [global] <context> <query> [paging]\n\n" <<
+            global_desc << "\n" << paging_desc;
 }
 
 int main(int argc, char **argv) {
@@ -43,39 +32,68 @@ int main(int argc, char **argv) {
         // Setup logging
         setup_logging(boost::nowide::cerr);
 
-        po::options_description command_line_options("");
-        command_line_options.add_options()
+        po::options_description global_options("global options");
+        global_options.add_options()
             ("help,h", "produce help message")
             ("log-level,l", po::value<log_level>()->default_value(log_level::warning, "warn"),
-             "Set logging level.\nSupported levels are: none, trace, debug, info, warn, error, and fatal.")
-            ("version,v", "print the version and exit")
-            ("context", po::value<string>()->default_value("nodes"), "endpoint for PuppetDB")
-            ("query", po::value<string>()->default_value(""), "query for PuppetDB")
-            ("limit", po::value<int>()->default_value(-1), "limit paging option for PuppetDB");
+             "Set logging level.\n"
+             "Supported levels are: none, trace, debug, info, warn, error, and fatal.")
+            ("version,v", "print the version and exit");
+
+        po::options_description command_line_options("");
+        command_line_options.add(global_options).add_options()
+          ("context", po::value<string>()->default_value(""), "endpoint to query on PuppetDB")
+          ("query", po::value<string>()->default_value(""), "query for PuppetDB")
+          ("paging", po::value<vector<string> >(), "paging options for PuppetDB");
 
         po::positional_options_description positional_options;
         positional_options.add("context", 1).
-          add("query", 1);
+          add("query", 1).
+          add("paging", -1);
+
+        po::options_description paging_options("paging options");
+        paging_options.add_options()
+          ("limit", po::value<int>()->default_value(-1), "limit paging option for PuppetDB")
+          ("order-by", po::value<string>()->default_value(""), "order-by paging option for PuppetDB");
 
         po::variables_map vm;
 
         try {
-            po::store(po::command_line_parser(argc, argv).
-                      options(command_line_options).
-                      positional(positional_options).run(),
-                      vm); // throws on error
+            po::parsed_options parsed = po::command_line_parser(argc, argv).
+              options(command_line_options).
+              positional(positional_options).
+              allow_unregistered().
+              run();  // throws on error
+
+            po::store(parsed, vm);
 
             if (vm.count("help")) {
-                help(command_line_options);
-                return EXIT_SUCCESS;
+              help(global_options, paging_options);
+              return EXIT_SUCCESS;
             }
+
+            if (vm.count("version")) {
+              boost::nowide::cout << puppetdb_cli::version() << endl;
+              return EXIT_SUCCESS;
+            }
+
+            if (vm["context"].as<string>().empty()) {
+              help(global_options, paging_options);
+              return EXIT_SUCCESS;
+            }
+
+            // Collect all the unrecognized options from the first pass. This will include the
+            // (positional) command name, so we need to erase that.
+            vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+            opts.erase(opts.begin(), opts.begin() + 2);
+            po::store(po::command_line_parser(opts).options(paging_options).run(), vm);
 
             po::notify(vm);
         } catch (exception& ex) {
             colorize(boost::nowide::cerr, log_level::error);
             boost::nowide::cerr << "error: " << ex.what() << "\n" << endl;
             colorize(boost::nowide::cerr);
-            help(command_line_options);
+            help(global_options, paging_options);
             return EXIT_FAILURE;
         }
 
@@ -83,18 +101,20 @@ int main(int argc, char **argv) {
         auto lvl = vm["log-level"].as<log_level>();
         set_level(lvl);
 
-        if (vm.count("version")) {
-            boost::nowide::cout << puppetdb_cli::version() << endl;
-            return EXIT_SUCCESS;
-        }
-
         auto endpoint = vm["context"].as<string>();
         auto query = vm["query"].as<string>();
         auto limit = vm["limit"].as<int>();
-        boost::nowide::cout << puppetdb_cli::query(puppetdb_cli::parse_config(),
-                                                   endpoint,
-                                                   query,
-                                                   limit) << endl;
+        auto order_by = vm["order-by"].as<string>();
+
+        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), endpoint, query, limit, order_by);
+        if (response.status_code() >= 200 && response.status_code() < 300) {
+          JsonContainer response_body(response.body());
+          boost::nowide::cout << response_body.toString() << endl;
+        } else {
+          colorize(boost::nowide::cerr, log_level::error);
+          boost::nowide::cerr << "error: invalid request to PuppetDB" << endl;
+          colorize(boost::nowide::cerr);
+        }
     } catch (exception& ex) {
         colorize(boost::nowide::cerr, log_level::fatal);
         boost::nowide::cerr << "unhandled exception: " << ex.what() << "\n" << endl;

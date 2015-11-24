@@ -28,6 +28,6 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 # We duplicate the `help_test` as `smoke_test` until the default functionality
 # of the tool has been nailed down.
-add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME} --help)
+add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME})
 add_test(NAME "help_test" COMMAND ${PROJECT_NAME} --help)
 add_test(NAME "version_test" COMMAND ${PROJECT_NAME} --version)
