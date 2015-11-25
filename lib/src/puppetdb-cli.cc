@@ -25,7 +25,7 @@ namespace puppetdb_cli {
     }
 
     JsonContainer parse_config() {
-      string pdbrc_path { file_util::get_home_path() + "/.pdbrc" };
+      string pdbrc_path { file_util::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
       JsonContainer default_config("{\"environments\":{\"dev\":{\"server_urls\":\"http://127.0.0.1:8080\"}}}");
       if (boost::filesystem::exists(pdbrc_path)) {
         JsonContainer raw_config(file_util::read(pdbrc_path));
