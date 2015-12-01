@@ -20,7 +20,7 @@ namespace curl = leatherman::curl;
 void help(po::options_description& global_desc, po::options_description& paging_desc)
 {
         boost::nowide::cout <<
-            "usage: puppetdb-cli [global] <context> <query> [paging]\n\n" <<
+            "usage: puppetdb-cli [global] <query> [paging]\n\n" <<
             global_desc << "\n" << paging_desc;
 }
 
@@ -42,13 +42,11 @@ int main(int argc, char **argv) {
 
         po::options_description command_line_options("");
         command_line_options.add(global_options).add_options()
-          ("context", po::value<string>()->default_value(""), "endpoint to query on PuppetDB")
           ("query", po::value<string>()->default_value(""), "query for PuppetDB")
           ("paging", po::value<vector<string> >(), "paging options for PuppetDB");
 
         po::positional_options_description positional_options;
-        positional_options.add("context", 1).
-          add("query", 1).
+        positional_options.add("query", 1).
           add("paging", -1);
 
         po::options_description paging_options("paging options");
@@ -77,7 +75,7 @@ int main(int argc, char **argv) {
               return EXIT_SUCCESS;
             }
 
-            if (vm["context"].as<string>().empty()) {
+            if (vm["query"].as<string>().empty()) {
               help(global_options, paging_options);
               return EXIT_SUCCESS;
             }
@@ -85,11 +83,7 @@ int main(int argc, char **argv) {
             // Collect all the unrecognized options from the first pass. This will include the
             // (positional) command name, so we need to erase that.
             vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
-            if (vm["query"].as<string>().empty()) {
-              opts.erase(opts.begin());
-            } else {
-              opts.erase(opts.begin(), opts.begin() + 2);
-            }
+            opts.erase(opts.begin());
             po::store(po::command_line_parser(opts).options(paging_options).run(), vm);
 
             po::notify(vm);
@@ -105,19 +99,18 @@ int main(int argc, char **argv) {
         auto lvl = vm["log-level"].as<log_level>();
         set_level(lvl);
 
-        auto endpoint = vm["context"].as<string>();
         auto limit = vm["limit"].as<int>();
         auto query_str = vm["query"].as<string>();
         JsonContainer query{ !query_str.empty() ? query_str : "{}" };
         JsonContainer order_by(vm["order-by"].as<string>());
 
-        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), endpoint, query, limit, order_by);
+        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), query, limit, order_by);
         if (response.status_code() >= 200 && response.status_code() < 300) {
           JsonContainer response_body(response.body());
           boost::nowide::cout << response_body.toString() << endl;
         } else {
           colorize(boost::nowide::cerr, log_level::error);
-          boost::nowide::cerr << "error: invalid request to PuppetDB" << endl;
+          boost::nowide::cerr << "error: " << response.body() << endl;
           colorize(boost::nowide::cerr);
         }
     } catch (exception& ex) {

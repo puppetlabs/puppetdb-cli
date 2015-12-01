@@ -37,7 +37,6 @@ namespace puppetdb_cli {
     }
 
     curl::response query(const JsonContainer& config,
-                         const string& endpoint,
                          const JsonContainer& query,
                          const int limit,
                          const JsonContainer& order_by) {
@@ -55,7 +54,7 @@ namespace puppetdb_cli {
       if (limit > 0) request_body.set("limit", limit);
       if (!order_by.empty()) request_body.set("order_by", order_by);
 
-      curl::request request(root_url + "/pdb/query/v4/" + endpoint);
+      curl::request request(root_url + "/pdb/query/v4");
       request.body(request_body.toString(), "application/json");
 
       return client.post(request);

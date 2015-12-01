@@ -29,7 +29,6 @@ namespace puppetdb_cli {
     /**
      * Query a PuppetDB endpoint for a given config.
      * @param config JsonContainer of the cli configuration.
-     * @param endpoint string of the PuppetDB endpoint to query.
      * @param query JsonContainer of the query for PuppetDB.
      * @param limit integer paging option for PuppetDB query.
      * @param order_by JsonContainer of the paging option for PuppetDB.
@@ -37,7 +36,6 @@ namespace puppetdb_cli {
      */
     leatherman::curl::response LIBPUPPETDB_CLI_EXPORT
     query(const leatherman::json_container::JsonContainer& config,
-          const std::string& endpoint,
           const leatherman::json_container::JsonContainer& query,
           const int limit,
           const leatherman::json_container::JsonContainer& order_by);
