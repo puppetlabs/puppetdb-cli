@@ -3,9 +3,12 @@
 ## Usage
 Example usage:
 ~~~bash
-$ puppetdb-cli '["from","reports",["extract","certname"]]' \
-    --limit=2 --order-by='[{"field":"certname","order":"desc"}]'
-[{"certname":"host-999"},{"certname":"host-999"}]
+$ git submodule update --init
+$ mkdir build && cd build
+$ CMAKE_PREFIX_PATH=/usr/local/opt/curl/lib cmake ..
+$ make -j
+$ ./bin/puppet-db '["from","reports",["extract","certname"]]'
+[{"certname":"host-1"}]
 ~~~
 
 ## Configuration

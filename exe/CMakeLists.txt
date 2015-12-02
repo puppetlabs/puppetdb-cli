@@ -13,14 +13,14 @@ include_directories(
     ${LEATHERMAN_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cc)
-target_link_libraries(${PROJECT_NAME}
+add_executable(puppet-db ${PROJECT_NAME}.cc)
+target_link_libraries(puppet-db
     lib${PROJECT_NAME}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${LEATHERMAN_LIBRARIES}
 )
 
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+install(TARGETS puppet-db DESTINATION bin)
 
 # Tests for the executable. These don't verify behavior, simply that the
 # executable runs without crashing or generating an error. Useful, but should be

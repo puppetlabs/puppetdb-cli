@@ -17,11 +17,11 @@ using leatherman::json_container::JsonContainer;
 namespace po = boost::program_options;
 namespace curl = leatherman::curl;
 
-void help(po::options_description& global_desc, po::options_description& paging_desc)
+void help(po::options_description& global_desc, po::options_description& query_subcommand_desc)
 {
         boost::nowide::cout <<
-            "usage: puppetdb-cli [global] <query> [paging]\n\n" <<
-            global_desc << "\n" << paging_desc;
+            "usage: puppet-db [global] query <query>\n\n" <<
+            global_desc << "\n" << query_subcommand_desc;
 }
 
 int main(int argc, char **argv) {
@@ -42,17 +42,18 @@ int main(int argc, char **argv) {
 
         po::options_description command_line_options("");
         command_line_options.add(global_options).add_options()
-          ("query", po::value<string>()->default_value(""), "query for PuppetDB")
-          ("paging", po::value<vector<string> >(), "paging options for PuppetDB");
+          ("subcommand", po::value<string>()->default_value(""), "subcommand to execute")
+          ("subargs", po::value< vector<string> >(), "arguments for subcommand");
 
         po::positional_options_description positional_options;
-        positional_options.add("query", 1).
-          add("paging", -1);
+        positional_options.add("subcommand", 1).add("subargs",-1);
 
-        po::options_description paging_options("paging options");
-        paging_options.add_options()
-          ("limit", po::value<int>()->default_value(-1), "limit paging option for PuppetDB")
-          ("order-by", po::value<string>()->default_value("[]"), "order-by paging option for PuppetDB");
+        po::options_description query_subcommand_options("query subcommand options");
+        query_subcommand_options.add_options()
+          ("query", po::value<string>()->default_value(""), "query for PuppetDB");
+
+        po::positional_options_description query_positional_options;
+        query_positional_options.add("query", 1);
 
         po::variables_map vm;
 
@@ -66,7 +67,7 @@ int main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("help")) {
-              help(global_options, paging_options);
+              help(global_options, query_subcommand_options);
               return EXIT_SUCCESS;
             }
 
@@ -75,8 +76,8 @@ int main(int argc, char **argv) {
               return EXIT_SUCCESS;
             }
 
-            if (vm["query"].as<string>().empty()) {
-              help(global_options, paging_options);
+            if (!(vm["subcommand"].as<string>() == "query") or vm["subargs"].as< vector<string> >().empty()) {
+              help(global_options, query_subcommand_options);
               return EXIT_SUCCESS;
             }
 
@@ -84,14 +85,16 @@ int main(int argc, char **argv) {
             // (positional) command name, so we need to erase that.
             vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
             opts.erase(opts.begin());
-            po::store(po::command_line_parser(opts).options(paging_options).run(), vm);
+            po::store(po::command_line_parser(opts).options(query_subcommand_options)
+                      .positional(query_positional_options)
+                      .run(), vm);
 
             po::notify(vm);
         } catch (exception& ex) {
             colorize(boost::nowide::cerr, log_level::error);
             boost::nowide::cerr << "error: " << ex.what() << "\n" << endl;
             colorize(boost::nowide::cerr);
-            help(global_options, paging_options);
+            help(global_options, query_subcommand_options);
             return EXIT_FAILURE;
         }
 
@@ -99,12 +102,9 @@ int main(int argc, char **argv) {
         auto lvl = vm["log-level"].as<log_level>();
         set_level(lvl);
 
-        auto limit = vm["limit"].as<int>();
-        auto query_str = vm["query"].as<string>();
-        JsonContainer query{ !query_str.empty() ? query_str : "{}" };
-        JsonContainer order_by(vm["order-by"].as<string>());
+        JsonContainer query{ vm["query"].as<string>() };
 
-        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), query, limit, order_by);
+        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), query);
         if (response.status_code() >= 200 && response.status_code() < 300) {
           JsonContainer response_body(response.body());
           boost::nowide::cout << response_body.toString() << endl;
