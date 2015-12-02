@@ -36,14 +36,19 @@ namespace puppetdb_cli {
       }
     }
 
-    curl::response query(const JsonContainer& config,
-                         const JsonContainer& query) {
+    curl::client pdb_client(const JsonContainer& config) {
       curl::client client;
       auto cacert = config.getWithDefault<string>("cacert", "");
       auto cert = config.getWithDefault<string>("cert", "");
       auto key = config.getWithDefault<string>("key", "");
       client.set_ca_cert(cacert);
       client.set_client_cert(cert, key);
+      return client;
+    }
+
+    curl::response pdb_query(const JsonContainer& config,
+                             const JsonContainer& query) {
+      curl::client client{ pdb_client(config) };
 
       auto root_url = config.getWithDefault<string>("server_urls", "http://127.0.0.1:8080");
 
@@ -54,6 +59,17 @@ namespace puppetdb_cli {
       request.body(request_body.toString(), "application/json");
 
       return client.post(request);
+    }
+
+    curl::response pdb_export(const JsonContainer& config,
+                              const string& anonymization) {
+        curl::client client{ pdb_client(config) };
+
+        auto root_url = config.getWithDefault<string>("server_urls", "http://127.0.0.1:8080");
+
+        curl::request request(root_url + "/pdb/admin/v1/archive?anonymization=" + anonymization);
+
+        return client.get(request);
     }
 
 }  // puppetdb_cli

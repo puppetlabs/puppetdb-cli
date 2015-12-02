@@ -7,7 +7,7 @@ $ git submodule update --init
 $ mkdir build && cd build
 $ CMAKE_PREFIX_PATH=/usr/local/opt/curl/lib cmake ..
 $ make -j
-$ ./bin/puppet-db '["from","reports",["extract","certname"]]'
+$ ./bin/puppet-db query '["from","reports",["extract","certname"]]'
 [{"certname":"host-1"}]
 ~~~
 
@@ -18,6 +18,6 @@ Example file to place at `~/.puppetlabs/client-tools/puppetdb.conf`:
  "environments": {"prod": {"root_url":"https://alpha-rho.local:8081",
                            "ca":"<path to ca.pem>",
                            "cert":"<path to cert .pem>",
-                           "key":"<path to private-key .pem>",
+                           "key":"<path to private-key .pem>"}
                   "dev": {"root_url":"http://localhost:8080"}}}
 ~~~

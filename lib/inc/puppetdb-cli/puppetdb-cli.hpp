@@ -9,6 +9,7 @@
 
 #include <leatherman/json_container/json_container.hpp>
 #include <leatherman/curl/response.hpp>
+#include <leatherman/curl/client.hpp>
 
 namespace puppetdb_cli {
 
@@ -27,13 +28,31 @@ namespace puppetdb_cli {
     parse_config();
 
     /**
+     * Create a client for connecting to PuppetDB.
+     * @param config JsonContainer of the cli configuration.
+     * @return A leatherman::curl::client using credentials from config.
+     */
+    leatherman::curl::client LIBPUPPETDB_CLI_EXPORT
+    pdb_client(const leatherman::json_container::JsonContainer& config);
+
+    /**
      * Query a PuppetDB endpoint for a given config.
      * @param config JsonContainer of the cli configuration.
      * @param query JsonContainer of the query for PuppetDB.
      * @return A leatherman::curl::response of the response from a PuppetDB query.
      */
     leatherman::curl::response LIBPUPPETDB_CLI_EXPORT
-    query(const leatherman::json_container::JsonContainer& config,
-          const leatherman::json_container::JsonContainer& query);
+    pdb_query(const leatherman::json_container::JsonContainer& config,
+              const leatherman::json_container::JsonContainer& query);
+
+    /**
+    * Export a PuppetDB archive for a given config.
+    * @param config JsonContainer of the cli configuration.
+    * @param anonymization string of the anonymization to apply to the archive.
+    * @return A leatherman::curl::response of the response from a PuppetDB archive GET.
+    */
+    leatherman::curl::response LIBPUPPETDB_CLI_EXPORT
+    pdb_export(const leatherman::json_container::JsonContainer& config,
+               const std::string& anonymization);
 
 }  // namespace puppetdb_cli

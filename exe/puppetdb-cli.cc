@@ -9,6 +9,8 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattributes"
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #pragma GCC diagnostic pop
 
 using namespace std;
@@ -16,12 +18,16 @@ using namespace leatherman::logging;
 using leatherman::json_container::JsonContainer;
 namespace po = boost::program_options;
 namespace curl = leatherman::curl;
+namespace filesystem = boost::filesystem;
 
-void help(po::options_description& global_desc, po::options_description& query_subcommand_desc)
+void help(po::options_description& global_desc,
+          po::options_description& export_subcommand_desc)
 {
         boost::nowide::cout <<
-            "usage: puppet-db [global] query <query>\n\n" <<
-            global_desc << "\n" << query_subcommand_desc;
+            "usage: puppet-db [global] export [options]\n" <<
+            "       puppet-db [global] query <query>\n\n" <<
+            global_desc << "\n" <<
+            export_subcommand_desc;
 }
 
 int main(int argc, char **argv) {
@@ -46,14 +52,19 @@ int main(int argc, char **argv) {
           ("subargs", po::value< vector<string> >(), "arguments for subcommand");
 
         po::positional_options_description positional_options;
-        positional_options.add("subcommand", 1).add("subargs",-1);
+        positional_options.add("subcommand", 1).add("subargs", -1);
 
         po::options_description query_subcommand_options("query subcommand options");
         query_subcommand_options.add_options()
-          ("query", po::value<string>()->default_value(""), "query for PuppetDB");
+          ("query", po::value<string>()->default_value(""), "query PuppetDB data");
 
         po::positional_options_description query_positional_options;
         query_positional_options.add("query", 1);
+
+        po::options_description export_subcommand_options("export subcommand options");
+        export_subcommand_options.add_options()
+          ("path", po::value<string>()->default_value("./pdb-export.tgz"), "path to create PuppetDB archive")
+          ("anonymization", po::value<string>()->default_value("none"), "anonymization for the PuppetDB archive");
 
         po::variables_map vm;
 
@@ -67,7 +78,7 @@ int main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("help")) {
-              help(global_options, query_subcommand_options);
+              help(global_options, export_subcommand_options);
               return EXIT_SUCCESS;
             }
 
@@ -76,8 +87,10 @@ int main(int argc, char **argv) {
               return EXIT_SUCCESS;
             }
 
-            if (!(vm["subcommand"].as<string>() == "query") or vm["subargs"].as< vector<string> >().empty()) {
-              help(global_options, query_subcommand_options);
+            auto subcommand = vm["subcommand"].as<string>();
+            if ((!(subcommand == "query") && !(subcommand == "export"))
+                || ((subcommand == "query") && vm["subargs"].as< vector<string> >().empty())) {
+              help(global_options, export_subcommand_options);
               return EXIT_SUCCESS;
             }
 
@@ -85,16 +98,23 @@ int main(int argc, char **argv) {
             // (positional) command name, so we need to erase that.
             vector<string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
             opts.erase(opts.begin());
-            po::store(po::command_line_parser(opts).options(query_subcommand_options)
-                      .positional(query_positional_options)
-                      .run(), vm);
+            if (subcommand == "query") {
+                po::store(po::command_line_parser(opts).options(query_subcommand_options)
+                          .positional(query_positional_options)
+                          .run(), vm);
+            }
+            if (subcommand == "export") {
+                po::store(po::command_line_parser(opts).options(export_subcommand_options)
+                          .run(), vm);
+            }
+
 
             po::notify(vm);
         } catch (exception& ex) {
             colorize(boost::nowide::cerr, log_level::error);
             boost::nowide::cerr << "error: " << ex.what() << "\n" << endl;
             colorize(boost::nowide::cerr);
-            help(global_options, query_subcommand_options);
+            help(global_options, export_subcommand_options);
             return EXIT_FAILURE;
         }
 
@@ -102,16 +122,29 @@ int main(int argc, char **argv) {
         auto lvl = vm["log-level"].as<log_level>();
         set_level(lvl);
 
-        JsonContainer query{ vm["query"].as<string>() };
+        auto subcommand = vm["subcommand"].as<string>();
+        auto config = puppetdb_cli::parse_config();
+        if (subcommand == "query") {
+            JsonContainer query{ vm["query"].as<string>() };
 
-        auto response = puppetdb_cli::query(puppetdb_cli::parse_config(), query);
-        if (response.status_code() >= 200 && response.status_code() < 300) {
-          JsonContainer response_body(response.body());
-          boost::nowide::cout << response_body.toString() << endl;
-        } else {
-          colorize(boost::nowide::cerr, log_level::error);
-          boost::nowide::cerr << "error: " << response.body() << endl;
-          colorize(boost::nowide::cerr);
+            auto response = puppetdb_cli::pdb_query(config, query);
+            if (response.status_code() >= 200 && response.status_code() < 300) {
+              JsonContainer response_body(response.body());
+              boost::nowide::cout << response_body.toString() << endl;
+            } else {
+              colorize(boost::nowide::cerr, log_level::error);
+              boost::nowide::cerr << "error: " << response.body() << endl;
+              colorize(boost::nowide::cerr);
+            }
+        }
+        if (subcommand ==  "export") {
+          auto anonymization = vm["anonymization"].as<string>();
+          filesystem::path path{ vm["path"].as<string>() };
+          filesystem::ofstream ofs{ path };
+          boost::nowide::cout << "Exporting PuppetDB..." << endl;
+          auto response = puppetdb_cli::pdb_export(config, anonymization);
+          ofs << response.body() << endl;
+          boost::nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
         }
     } catch (exception& ex) {
         colorize(boost::nowide::cerr, log_level::fatal);

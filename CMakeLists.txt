@@ -31,7 +31,7 @@ add_definitions(${LEATHERMAN_DEFINITIONS})
 include(leatherman)
 
 # Add other dependencies
-find_package(Boost 1.54 REQUIRED COMPONENTS program_options)
+find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
 
 # Display a summary of the features
 include(FeatureSummary)

@@ -17,6 +17,7 @@ add_executable(puppet-db ${PROJECT_NAME}.cc)
 target_link_libraries(puppet-db
     lib${PROJECT_NAME}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
     ${LEATHERMAN_LIBRARIES}
 )
 
@@ -28,6 +29,6 @@ install(TARGETS puppet-db DESTINATION bin)
 
 # We duplicate the `help_test` as `smoke_test` until the default functionality
 # of the tool has been nailed down.
-add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME})
-add_test(NAME "help_test" COMMAND ${PROJECT_NAME} --help)
-add_test(NAME "version_test" COMMAND ${PROJECT_NAME} --version)
+add_test(NAME "smoke_test" COMMAND puppet-db)
+add_test(NAME "help_test" COMMAND puppet-db --help)
+add_test(NAME "version_test" COMMAND puppet-db --version)
