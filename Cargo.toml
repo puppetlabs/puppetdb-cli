@@ -3,7 +3,26 @@ name = "rust-puppetdb-cli"
 version = "0.1.0"
 authors = ["Andrew Roetker <andrew.roetker@puppetlabs.com>"]
 
+[lib]
+name = "pdb"
+path = "src/lib.rs"
+
+[[bin]]
+name = "puppet-pdb"
+path = "src/main.rs"
+
+
 [dependencies]
-hyper = "0.5.*"
+hyper = "0.7.*"
 docopt = "0.6.*"
-serde = "0.4.*"
+rustc-serialize = "0.3.*"  # if you're using `derive(RustcDecodable)`
+url = "*"
+flate2 = "0.2.*"
+tar = "0.3.*"
+openssl = "0.7.*"
+
+[dependencies.multipart]
+version = "*" # Or use the version in the Crates.io badge above.
+# You can also select which features to compile:
+# default-features = false
+features = ["hyper", "server", "client"]
