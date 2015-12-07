@@ -1,7 +1,6 @@
 # Rust Implementation of a PuppetDB CLI
 
 [![Build status](https://ci.appveyor.com/api/projects/status/bhln68k6pdfixrun?svg=true)](https://ci.appveyor.com/project/ajroetker/rust-puppetdb-cli)
-
 [![Build Status](https://travis-ci.org/ajroetker/rust-puppetdb-cli.svg)](https://travis-ci.org/ajroetker/rust-puppetdb-cli)
 
 ## Installation
@@ -29,7 +28,7 @@ The format of the config file can be deduced from the following example.
 
 ```json
 {
-    "default_environment" : "prod"
+    "default_environment" : "prod",
     "environments" : {
         "prod" : {
             "server_urls" : [
