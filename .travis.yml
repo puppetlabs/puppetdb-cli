@@ -2,6 +2,8 @@ language: rust
 matrix:
     fast_finish: true
     include:
+        - rust: nightly
+        - rust: beta
         - rust: stable
 
 sudo: false
@@ -14,4 +16,7 @@ cache:
 
 script:
   - cargo build --verbose
-  - PATH=$PATH:./target/debug puppet-pdb --version
+  - cargo test --verbose
+
+notifications:
+    email: false

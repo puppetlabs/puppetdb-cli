@@ -1,16 +1,22 @@
 environment:
+  OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
+  OPENSSL_LIB_DIR: C:\OpenSSL\lib
+  OPENSSL_LIBS: ssleay32:libeay32
   matrix:
-  - TARGET: x86_64-pc-windows-msvc
-  - TARGET: i686-pc-windows-msvc
-  - TARGET: x86_64-pc-windows-gnu
   - TARGET: i686-pc-windows-gnu
+    BITS: 32
+
 install:
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2e.exe"
+  - Win%BITS%OpenSSL-1_0_2e.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
   - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.4.0-${env:TARGET}.exe" -FileName "rust-1.4.0.exe"
   - ps: .\rust-1.4.0.exe /VERYSILENT /NORESTART /DIR="C:\rust" | Out-Null
-  - ps: $env:PATH="$env:PATH;C:\rust\bin"
+  - SET PATH=%PATH%;C:\rust\bin;C:\MinGW\bin
   - rustc -vV
   - cargo -vV
+
 build: false
+
 test_script:
-  - cargo build --verborse
-  - PATH=$PATH:./target/debug puppet-pdb --version
+  - cargo build
+  - cargo test
