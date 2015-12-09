@@ -1,5 +1,6 @@
-#include <puppetdb-cli/version.h>
-#include <puppetdb-cli/puppetdb-cli.hpp>
+#include <iostream>
+
+#include <boost/filesystem.hpp>
 
 #include <leatherman/logging/logging.hpp>
 #include <leatherman/json_container/json_container.hpp>
@@ -8,9 +9,9 @@
 #include <leatherman/curl/response.hpp>
 #include <leatherman/file_util/file.hpp>
 
-#include <boost/filesystem.hpp>
+#include <puppetdb-cli/version.h>
+#include <puppetdb-cli/puppetdb-cli.hpp>
 
-#include <iostream>
 namespace puppetdb_cli {
 
     using namespace std;
@@ -18,15 +19,17 @@ namespace puppetdb_cli {
     namespace file_util = leatherman::file_util;
     namespace curl = leatherman::curl;
 
-    string version()
+    string
+    version()
     {
         LOG_DEBUG("puppetdb-cli version is %1%", PUPPETDB_CLI_VERSION_WITH_COMMIT);
         return PUPPETDB_CLI_VERSION_WITH_COMMIT;
     }
 
-    JsonContainer parse_config() {
+    JsonContainer
+    parse_config() {
       string pdbrc_path { file_util::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
-      JsonContainer default_config("{\"environments\":{\"dev\":{\"server_urls\":\"http://127.0.0.1:8080\"}}}");
+      JsonContainer default_config("{\"environments\":{\"dev\":{\"server_urls\":[\"http://127.0.0.1:8080\"]}}}");
       if (boost::filesystem::exists(pdbrc_path)) {
         JsonContainer raw_config(file_util::read(pdbrc_path));
         auto host = raw_config.getWithDefault<string>("default_environment", "dev");
@@ -36,7 +39,8 @@ namespace puppetdb_cli {
       }
     }
 
-    curl::client pdb_client(const JsonContainer& config) {
+    curl::client
+    pdb_client(const JsonContainer& config) {
       curl::client client;
       auto cacert = config.getWithDefault<string>("cacert", "");
       auto cert = config.getWithDefault<string>("cert", "");
@@ -46,26 +50,29 @@ namespace puppetdb_cli {
       return client;
     }
 
-    curl::response pdb_query(const JsonContainer& config,
-                             const JsonContainer& query) {
+    curl::response
+    pdb_query(const JsonContainer& config,
+              const JsonContainer& query) {
       curl::client client{ pdb_client(config) };
 
-      auto root_url = config.getWithDefault<string>("server_urls", "http://127.0.0.1:8080");
+      auto server_urls = config.get< vector<string> >("server_urls");
+      auto root_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
 
       JsonContainer request_body;
       if (!query.empty()) request_body.set("query", query);
-
       curl::request request(root_url + "/pdb/query/v4");
       request.body(request_body.toString(), "application/json");
 
       return client.post(request);
     }
 
-    curl::response pdb_export(const JsonContainer& config,
-                              const string& anonymization) {
+    curl::response
+    pdb_export(const JsonContainer& config,
+               const string& anonymization) {
         curl::client client{ pdb_client(config) };
 
-        auto root_url = config.getWithDefault<string>("server_urls", "http://127.0.0.1:8080");
+        auto server_urls = config.get< vector<string> >("server_urls");
+        auto root_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
 
         curl::request request(root_url + "/pdb/admin/v1/archive?anonymization=" + anonymization);
 

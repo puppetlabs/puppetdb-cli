@@ -18,7 +18,8 @@ namespace puppetdb_cli {
      * Query the library version.
      * @return A version string with \<major>.\<minor>.\<patch>
      */
-    std::string LIBPUPPETDB_CLI_EXPORT version();
+    std::string LIBPUPPETDB_CLI_EXPORT
+    version();
 
     /**
      * Parse a `puppetdb-cli` config at `~/.pdbrc`.
