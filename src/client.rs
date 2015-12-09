@@ -1,9 +1,9 @@
-use std::io::{self, Read};
-
 use hyper::Client;
 use hyper::header::{Connection,ContentType};
 use hyper::method::Method;
 use hyper::client::request::Request;
+use hyper::client::response::Response;
+use hyper::error::Error;
 
 use rustc_serialize::json;
 
@@ -60,7 +60,7 @@ pub fn client(config: Config) -> Client {
 }
 
 use hyper::net::Streaming;
-pub fn multipart(config: Config, url: Url, ) -> Multipart<Request<Streaming>> {
+pub fn multipart(config: Config, url: Url) -> Multipart<Request<Streaming>> {
     let request =
         if !config.cacert.is_empty() {
             let conn = ssl_connector(Path::new(&config.cacert),
@@ -72,6 +72,8 @@ pub fn multipart(config: Config, url: Url, ) -> Multipart<Request<Streaming>> {
         };
     Multipart::from_request(request).unwrap()
 }
+
+use std::io::Read;
 
 fn get_command_versions(path: &str) -> Option<String> {
     let archive = File::open(&path).ok().expect("couldn't open archive file");
@@ -100,49 +102,49 @@ fn get_command_versions(path: &str) -> Option<String> {
     }
 }
 
-pub fn execute_import(config: Config, path: String) {
-    let url = Url::parse("http://127.0.0.1:8080/pdb/admin/v1/archive").unwrap();
-    let mut multipart = multipart(config, url);
-    multipart.write_text("command_versions", get_command_versions(&path).unwrap());
-    multipart.write_file("archive", &path);
-    let mut response = multipart.send().ok().expect("failed to connect to PuppetDB");
+const DEFAULT_COMMAND_VERSIONS: &'static str = "{\"replace_catalog\":7,\"store_report\":6,\"replace_facts\":4}";
 
-    let mut buffer = String::new();
-    response.read_to_string(&mut buffer).unwrap();
-    let response_body = json::Json::from_str(&buffer)
-        .ok().expect(&format!("error triggering export: {}", buffer));
-    if "true" == response_body.as_object().unwrap().get("ok").unwrap().to_string() {
-        println!("Import triggered for archive {}.", path);
+pub fn execute_import(config: Config, path: String) -> Result<Response,Error> {
+    let server_url: String = if config.server_urls.len() > 0 {
+        config.server_urls[0].clone()
     } else {
-        println!("error triggering import: check PuppetDB logs for more details")
-    }
+        "http://127.0.0.1:8080".to_owned()
+    };
+    let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
+    let mut multipart = multipart(config, url);
+    multipart.write_text("command_versions",
+                         get_command_versions(&path).unwrap_or(DEFAULT_COMMAND_VERSIONS.to_owned()));
+    multipart.write_file("archive", &path);
+    multipart.send()
 }
 
-pub fn execute_export(config: Config, path: String, anonymization: String) {
-    let mut res = client(config)
-        .get("http://127.0.0.1:8080/pdb/admin/v1/archive")
+pub fn execute_export(config: Config, anonymization: String) -> Result<Response,Error> {
+    let server_url: String = if config.server_urls.len() > 0 {
+        config.server_urls[0].clone()
+    } else {
+        "http://127.0.0.1:8080".to_owned()
+    };
+    client(config)
+        .get(&(server_url + "/pdb/admin/v1/archive"))
         .body(&("anonymization=".to_string() + &anonymization))
         .header(Connection::close())
-        .send().unwrap();
-
-    let mut f = File::create(path.clone()).ok().expect("failed to create file");
-    io::copy(&mut res, &mut f).ok().expect("failed to write response");
-    println!("Wrote archive to {}.", path);
+        .send()
 }
 
-pub fn execute_query(config: Config, query_str: String) {
+pub fn execute_query(config: Config, query_str: String) -> Result<Response,Error> {
+    let server_url: String = if config.server_urls.len() > 0 {
+        config.server_urls[0].clone()
+    } else {
+        "http://127.0.0.1:8080".to_owned()
+    };
     let query = json::Json::from_str(&query_str).unwrap();
     let pdb_query = PdbQuery{query: query};
     let pdb_query_str = json::encode(&pdb_query).unwrap().to_string();
 
-    let mut res = client(config)
-        .post("http://127.0.0.1:8080/pdb/query/v4")
+    client(config)
+        .post(&(server_url + "/pdb/query/v4"))
         .body(&pdb_query_str)
         .header(ContentType::json())
         .header(Connection::close())
-        .send().unwrap();
-
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    io::copy(&mut res, &mut handle).ok().expect("failed to write response");
+        .send()
 }

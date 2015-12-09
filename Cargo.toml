@@ -5,7 +5,6 @@ description = "PuppetDB CLI tool in rust."
 readme = "README.md"
 documentation = "http://ajroetker.github.io/rust-puppetdb-cli/index.html"
 repository = "https://github.com/ajroetker/rust-puppetdb-cli"
-license = "MIT"
 license-file = "LICENSE"
 keywords = ["puppet", "puppetdb", "puppetdb-cli"]
 authors = ["Andrew Roetker <andrew.roetker@puppetlabs.com>"]

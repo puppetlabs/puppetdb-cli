@@ -2,6 +2,7 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/bhln68k6pdfixrun?svg=true)](https://ci.appveyor.com/project/ajroetker/rust-puppetdb-cli)
 [![Build Status](https://travis-ci.org/ajroetker/rust-puppetdb-cli.svg)](https://travis-ci.org/ajroetker/rust-puppetdb-cli)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ## Installation
 
@@ -24,11 +25,14 @@ Using `rustc` 1.4.0 (stable) and `cargo` 0.6.0:
 The Rust PuppetDB CLI accepts a `--config=<path_to_config>` flag which allows
 you to configure your ssl credentials and the location of your PuppetDB.
 
+By default the tool will use `$HOME/.puppetlabs/client-tools/puppetdb.conf` as it's
+configuration file if it exists.
+
 The format of the config file can be deduced from the following example.
 
 ```json
 {
-    "default_environment" : "prod",
+    "default\_environment" : "prod",
     "environments" : {
         "prod" : {
             "server_urls" : [
@@ -37,7 +41,7 @@ The format of the config file can be deduced from the following example.
             ],
             "cacert" : "/path/to/cacert",
             "cert" : "/path/to/cert",
-            "key" : "/path/to/private_key"
+            "key" : "/path/to/private\_key"
         },
         "dev" : {
             "server_urls" : [
@@ -47,3 +51,14 @@ The format of the config file can be deduced from the following example.
     }
 }
 ```
+
+## TODO
+
+- [ ] Add failover for `server_urls`
+- [ ] Add `status` command for PuppetDB health checks
+- [ ] Abstract configuration loading errors
+- [ ] Add pretty-printing to JSON responses
+- [ ] Add `--log-level` and `--silent` options
+- [ ] Use logging for error messages instead of using stdout for everything
+- [ ] Add `--pdb-env` flag for specifying what config environment to use
+- [ ] Add testing for all the things
