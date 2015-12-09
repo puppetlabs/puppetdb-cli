@@ -32,7 +32,7 @@ The format of the config file can be deduced from the following example.
 
 ```json
 {
-    "default\_environment" : "prod",
+    "default_environment" : "prod",
     "environments" : {
         "prod" : {
             "server_urls" : [
@@ -41,7 +41,7 @@ The format of the config file can be deduced from the following example.
             ],
             "cacert" : "/path/to/cacert",
             "cert" : "/path/to/cert",
-            "key" : "/path/to/private\_key"
+            "key" : "/path/to/private_key"
         },
         "dev" : {
             "server_urls" : [
