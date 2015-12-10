@@ -1,0 +1,26 @@
+# Because YAML
+docopt: |
+
+    puppet-db -- Perform maintenance operations on PuppetDB
+
+    Usage:
+        puppet-db export [<file>] [options]
+        puppet-db status [options]
+        puppet-db (-h | --help)
+
+    Options:
+        --version               Display version information
+        -h,--help               Show this message
+        -V,--verbose            Enable verbosity
+        -d,--debug              Enable debug logging
+
+    Connection options:
+        --instance              Instance of PuppetDB to retrun data from
+        --service-url           https://puppet.rg-bank.com:8081
+        --tlsv1                 Connect to PuppetDB using TLS
+        --ca-cert               Defaults to /etc/puppet/ssl/certs/ca.pem
+        --cert                  Defaults to /etc/puppet/ssl/certs/<node>.pem
+        --key                   Defaults to /etc/puppet/ssl/private_keys/<node>.pem
+
+    Docopt options:
+        --docopt                DOCOPT PROTOTYPE ONLY: Prints the docopt values parsed from the CLI.

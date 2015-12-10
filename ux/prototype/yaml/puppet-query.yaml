@@ -1,0 +1,122 @@
+# Because YAML
+docopt: |
+
+    puppet-query -- Retrieve and display data from PuppetDB
+
+    Usage:
+        puppet-query (<query-expression> | --file <filename>) [options]
+        puppet-query (-h | --help)
+
+    Options:
+        --version               Display version information
+        -h,--help               Show this message
+        -V,--verbose            Enable verbosity
+        -d,--debug              Enable debug logging
+
+    Connection options:
+        --instance              Instance of PuppetDB to retrun data from
+        --service-url           https://puppet.rg-bank.com:8081
+        --tlsv1                 Connect to PuppetDB using TLS
+        --ca-cert               Defaults to /etc/puppet/ssl/certs/ca.pem
+        --cert                  Defaults to /etc/puppet/ssl/certs/<node>.pem
+        --key                   Defaults to /etc/puppet/ssl/private_keys/<node>.pem
+
+    Query options:
+        -f,--file <filename>    Text file containing query
+        -l,--limit <int>
+        -o,--offset <int>
+        -b,--order-by <string>
+        -F,--format <csv,json,yaml,pretty-json>
+
+    Docopt options:
+        --docopt                DOCOPT PROTOTYPE ONLY: Prints the docopt values parsed from the CLI.
+
+    Examples:
+
+        Return all active nodes
+
+            puppet-query '["=", ["node", "active"], true]'
+
+        By default, results are returned in a pretty-printed table. Use the
+        --format flag to return structured data in CSV, JSON or YAML formats.
+
+        The result set can be reduced using the --limit and --offset flags,
+        and sorted using --order-by. The following will return 5 nodes,
+        skipping the first 5, and sort the set by certname:
+
+            puppet-query '["=", ["node", "active"], true]' --limit 5 --offset 5 --order-by certname
+
+        Querying against multiple instances of PuppetDB is supported.
+        When multiple instances are defined in the configuration file,
+        puppet-query can be told which to use with the --instance flag.
+
+            puppet-query '["=", ["node", "active"], true]' --instance pdb-dev
+
+        If a default instance is set in the configuration file, you do
+        not need to specify --instance to use it.
+
+        Further examples and detailed usage are available at:
+        https://github.com/puppetlabs/puppet-query-examples
+
+msgs:
+  -
+    command: "leatherman.curl:463"
+    message: "requesting https://puppet.rg-bank.com:4433/rbac-api/v1/auth/token."
+  -
+    command: "leatherman.curl:463"
+    message: "Trying 172.31.21.48..."
+  -
+    command: "leatherman.curl:463"
+    message: "Connected to puppet.rg-bank.com (172.31.21.48) port 4433 (#0)"
+  -
+    command: "leatherman.curl:463"
+    message: "ALPN, offering http/1.1"
+  -
+    command: "leatherman.curl:463"
+    message: "Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
+  -
+    command: "leatherman.curl:463"
+    message: "successfully set certificate verify locations:"
+  -
+    command: "leatherman.curl:463"
+    message: "CAfile: /etc/puppetlabs/puppet/ssl/certs/ca.pem"
+  -
+    command: "leatherman.curl:463"
+    message: "SSL connection using TLSv1.2 / AES256-SHA256"
+  -
+    command: "leatherman.curl:463"
+    message: "ALPN, server did not agree to a protocol"
+  -
+    command: "leatherman.curl:463"
+    message: "Server certificate:"
+  -
+    command: "leatherman.curl:463"
+    message: "subject: CN=puppet.rg-bank.com"
+  -
+    command: "leatherman.curl:463"
+    message: "start date: 2015-12-06 21:29:02 GMT"
+  -
+    command: "leatherman.curl:463"
+    message: "expire date: 2020-12-05 21:29:02 GMT"
+  -
+    command: "leatherman.curl:463"
+    message: "subjectAltName: puppet.rg-bank.com matched"
+  -
+    command: "leatherman.curl:463"
+    message: "issuer: CN=Puppet CA generated on puppet.rg-bank.com at 2015-12-07 21:28:54 +0000"
+  -
+    command: "leatherman.curl:463"
+    message: "SSL certificate verify ok."
+  -
+    command: "leatherman.curl:463"
+    message: "We are completely uploaded and fine"
+  -
+    command: "leatherman.curl:463"
+    message: "Connection #0 to host puppet.rg-bank.com left intact"
+  -
+    command: "leatherman.curl:463"
+    message: "leatherman.curl:165 - request completed (status 200)."
+csv: |
+    deactivated,latest_report_hash,facts_environment,report_environment,catalog_environment,facts_timestamp,expired,report_timestamp,certname,catalog_timestamp,latest_report_status
+    ,36bd2a24153b950807be3ff754e65788042dc1bc,production,production,production,2015-11-06T13:32:48.861Z,,2015-11-06T13:04:16.434Z,host-3,2015-11-06T13:32:49.150Z,changed
+    ,36bd2a24153b950807be3ff754e65788042dc1bc,production,production,production,2015-11-06T13:32:48.861Z,,2015-11-06T13:04:16.434Z,host-3,2015-11-06T13:32:49.150Z,changed
