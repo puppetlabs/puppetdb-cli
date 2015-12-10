@@ -22,14 +22,14 @@ def process_cli_arguments(cli, arguments):
                 cli,
                 arguments=arguments,
                 render_as=arguments['--format'],
-                query_result='default_query.json'
+                query_result=os.path.dirname(os.path.abspath(__file__))+'/default_query.json'
                 )
 
     except KeyboardInterrupt:
         cli_lib.exit_cli()
 
 
-def render_result(cli, arguments, query_result='default_query.json', render_as='tab'):
+def render_result(cli, arguments, query_result, render_as='tab'):
     """Spit out things that look vaguely like a query query_result"""
 
     if arguments['--file']:
