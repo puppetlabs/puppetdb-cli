@@ -32,6 +32,11 @@ include(leatherman)
 
 # Add other dependencies
 find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
+find_package(CURL REQUIRED)
+
+if (CURL_STATIC)
+    add_definitions(-DCURL_STATICLIB)
+endif()
 
 # Display a summary of the features
 include(FeatureSummary)
