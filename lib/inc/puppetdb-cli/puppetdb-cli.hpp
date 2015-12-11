@@ -49,11 +49,13 @@ namespace puppetdb_cli {
     /**
     * Export a PuppetDB archive for a given config.
     * @param config JsonContainer of the cli configuration.
+    * @param path string of the file path to which to stream the archive.
     * @param anonymization string of the anonymization to apply to the archive.
-    * @return A leatherman::curl::response of the response from a PuppetDB archive GET.
+    * @return This function does not return anything.
     */
-    leatherman::curl::response LIBPUPPETDB_CLI_EXPORT
+    void LIBPUPPETDB_CLI_EXPORT
     pdb_export(const leatherman::json_container::JsonContainer& config,
+               const std::string& path,
                const std::string& anonymization);
 
 }  // namespace puppetdb_cli

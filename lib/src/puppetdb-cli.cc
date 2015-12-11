@@ -1,4 +1,6 @@
-#include <iostream>
+#include <stdio.h>
+#include <curl/curl.h>
+#include <string>
 
 #include <boost/filesystem.hpp>
 
@@ -56,27 +58,46 @@ namespace puppetdb_cli {
       curl::client client{ pdb_client(config) };
 
       auto server_urls = config.get< vector<string> >("server_urls");
-      auto root_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
+      auto server_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
 
       JsonContainer request_body;
       if (!query.empty()) request_body.set("query", query);
-      curl::request request(root_url + "/pdb/query/v4");
+      curl::request request(server_url + "/pdb/query/v4");
       request.body(request_body.toString(), "application/json");
 
       return client.post(request);
     }
 
-    curl::response
+    size_t
+    write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+        size_t written = fwrite(ptr, size, nmemb, stream);
+        return written;
+    }
+
+    void
     pdb_export(const JsonContainer& config,
+               const string& path,
                const string& anonymization) {
-        curl::client client{ pdb_client(config) };
+        auto cacert = config.getWithDefault<string>("cacert", "");
+        auto cert = config.getWithDefault<string>("cert", "");
+        auto key = config.getWithDefault<string>("key", "");
+
+        auto curl = shared_ptr<CURL>(curl_easy_init(), curl_easy_cleanup);
+
+        if (cacert != "") curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert.c_str());
+        if (cert != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert.c_str());
+        if (key != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key.c_str());
 
         auto server_urls = config.get< vector<string> >("server_urls");
-        auto root_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
+        auto server_url = (server_urls.size() > 0) ? server_urls[0] : "http://127.0.0.1:8080";
 
-        curl::request request(root_url + "/pdb/admin/v1/archive?anonymization=" + anonymization);
+        string url = "http://localhost:8080/pdb/admin/v1/archive?anonymization=" + anonymization;
 
-        return client.get(request);
+        auto fp = shared_ptr<FILE>(fopen(path.c_str(), "wb"), fclose);
+        curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, fp.get());
+        curl_easy_perform(curl.get());
     }
 
 }  // puppetdb_cli

@@ -17,7 +17,6 @@ using namespace std;
 namespace po = boost::program_options;
 namespace filesystem = boost::filesystem;
 using namespace leatherman::logging;
-namespace curl = leatherman::curl;
 using leatherman::json_container::JsonContainer;
 
 void
@@ -147,11 +146,9 @@ main(int argc, char **argv) {
         }
         if (subcommand ==  "export") {
             auto anonymization = vm["anonymization"].as<string>();
-            filesystem::path path{ vm["path"].as<string>() };
-            filesystem::ofstream ofs{ path };
+            auto path = vm["path"].as<string>();
             boost::nowide::cout << "Exporting PuppetDB..." << endl;
-            auto response = puppetdb_cli::pdb_export(config, anonymization);
-            ofs << response.body() << endl;
+            puppetdb_cli::pdb_export(config, path, anonymization);
             boost::nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
         }
     } catch (exception& ex) {
