@@ -19,13 +19,6 @@ elif [ ${TRAVIS_TARGET} == DEBUG ]; then
   pip install --user cpp-coveralls
 fi
 
-mkdir ./vendor/leatherman/build
-pushd ./vendor/leatherman/build
-cmake ..
-make -j2
-make install
-popd
-
 # Generate build files
 if [ ${TRAVIS_TARGET} == DEBUG ]; then
   TARGET_OPTS="-DCMAKE_BUILD_TYPE=Debug -DCOVERALLS=ON"
