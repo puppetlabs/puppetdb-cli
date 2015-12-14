@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS ${${PROJECT_NAME_UPPER}_CXX_FLAGS})
 leatherman_logging_namespace("puppetlabs.${PROJECT_NAME}")
 
 # Setup compiling the library.
-include_directories(inc ${Boost_INCLUDE_DIRS} ${LEATHERMAN_INCLUDE_DIRS})
+include_directories(inc ${CURL_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${LEATHERMAN_INCLUDE_DIRS})
 
 set(PROJECT_SOURCES "src/${PROJECT_NAME}.cc")
 
@@ -29,8 +29,9 @@ set_target_properties(libprojectsrc PROPERTIES POSITION_INDEPENDENT_CODE true)
 add_library(lib${PROJECT_NAME} $<TARGET_OBJECTS:libprojectsrc>)
 set_target_properties(lib${PROJECT_NAME} PROPERTIES PREFIX "" IMPORT_PREFIX "" VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 target_link_libraries(lib${PROJECT_NAME}
-    ${LEATHERMAN_LIBRARIES}
+    ${CURL_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${LEATHERMAN_LIBRARIES}
 )
 
 # Generate the export header for restricting symbols exported from the library.

@@ -13,18 +13,22 @@ include_directories(
     ${LEATHERMAN_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cc)
-target_link_libraries(${PROJECT_NAME}
+add_executable(puppet-db ${PROJECT_NAME}.cc)
+target_link_libraries(puppet-db
     lib${PROJECT_NAME}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
     ${LEATHERMAN_LIBRARIES}
 )
 
-install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+install(TARGETS puppet-db DESTINATION bin)
 
-# Tests for the executable. These don't verify behavior, simply that the executable runs
-# without crashing or generating an error. Useful, but should be enhanced with test scripts
-# and/or acceptance tests.
-add_test(NAME "smoke_test" COMMAND ${PROJECT_NAME})
-add_test(NAME "help_test" COMMAND ${PROJECT_NAME} --help)
-add_test(NAME "version_test" COMMAND ${PROJECT_NAME} --version)
+# Tests for the executable. These don't verify behavior, simply that the
+# executable runs without crashing or generating an error. Useful, but should be
+# enhanced with test scripts and/or acceptance tests.
+
+# We duplicate the `help_test` as `smoke_test` until the default functionality
+# of the tool has been nailed down.
+add_test(NAME "smoke_test" COMMAND puppet-db)
+add_test(NAME "help_test" COMMAND puppet-db --help)
+add_test(NAME "version_test" COMMAND puppet-db --version)

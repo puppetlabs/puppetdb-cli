@@ -31,7 +31,12 @@ add_definitions(${LEATHERMAN_DEFINITIONS})
 include(leatherman)
 
 # Add other dependencies
-find_package(Boost 1.54 REQUIRED COMPONENTS program_options)
+find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
+find_package(CURL REQUIRED)
+
+if (CURL_STATIC)
+    add_definitions(-DCURL_STATICLIB)
+endif()
 
 # Display a summary of the features
 include(FeatureSummary)
@@ -42,6 +47,11 @@ set(LEATHERMAN_USE_LOCALE TRUE)
 set(LEATHERMAN_USE_CATCH TRUE)
 set(LEATHERMAN_USE_NOWIDE TRUE)
 set(LEATHERMAN_USE_LOGGING TRUE)
+set(LEATHERMAN_USE_UTIL TRUE)
+set(LEATHERMAN_USE_FILE_UTIL TRUE)
+set(LEATHERMAN_USE_RAPIDJSON TRUE)
+set(LEATHERMAN_USE_JSON_CONTAINER TRUE)
+set(LEATHERMAN_USE_CURL TRUE)
 add_subdirectory("vendor/leatherman")
 
 add_subdirectory(lib)
