@@ -35,12 +35,18 @@ version()
 
 json::JsonContainer
 parse_config() {
-    const string pdbrc_path { futil::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
-    const json::JsonContainer default_config("{\"environments\":{\"dev\":{\"server_urls\":[\"http://127.0.0.1:8080\"]}}}");
+    const string pdbrc_path
+    { futil::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
+    const string default_config_str
+    { "{\"environments\":{\"dev\":{\"server_urls\":[\"http://127.0.0.1:8080\"]}}}" };
+    const json::JsonContainer default_config(default_config_str);
     if (fs::exists(pdbrc_path)) {
         const json::JsonContainer raw_config(futil::read(pdbrc_path));
-        const auto host = raw_config.getWithDefault<string>("default_environment", "dev");
-        return raw_config.getWithDefault<json::JsonContainer>({"environments", host}, default_config);
+        const auto host = raw_config
+                .getWithDefault<string>("default_environment", "dev");
+        return raw_config
+                .getWithDefault<json::JsonContainer>({"environments", host},
+                                                     default_config);
     } else {
         return default_config;
     }
@@ -77,7 +83,8 @@ void
 pdb_query(const json::JsonContainer& config,
           const json::JsonContainer& query) {
     const auto server_url = pdb_server_url(config);
-    const auto response = pdb_client(config).post(pdb_query_request(server_url, query));
+    const auto response = pdb_client(config)
+            .post(pdb_query_request(server_url, query));
     if (response.status_code() >= 200 && response.status_code() < 300) {
         json::JsonContainer response_body(response.body());
         nowide::cout << response_body.toString() << endl;
@@ -101,7 +108,8 @@ pdb_curl_handler(const json::JsonContainer& config) {
     const auto cert = config.getWithDefault<string>("cert", "");
     const auto key = config.getWithDefault<string>("key", "");
 
-    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(), curl_easy_cleanup);
+    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
+                                                          curl_easy_cleanup);
 
     if (cacert != "") curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert.c_str());
     if (cert != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert.c_str());
@@ -119,10 +127,21 @@ pdb_export(const json::JsonContainer& config,
             + anonymization;
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
 
-    auto fp = unique_ptr< FILE, function<void(FILE*)> >(fopen(path.c_str(), "wb"), fclose);
+    auto fp = unique_ptr< FILE, function<void(FILE*)> >(fopen(path.c_str(), "wb"),
+                                                        fclose);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, fp.get());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
-    curl_easy_perform(curl.get());
+    nowide::cout << "Exporting PuppetDB..." << endl;
+    const CURLcode curl_code = curl_easy_perform(curl.get());
+    int http_code = 0;
+    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+    if (http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK) {
+        nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
+    } else {
+        logging::colorize(nowide::cerr, logging::log_level::fatal);
+        nowide::cerr << "error: failed to download PuppetDB archive" << endl;
+        logging::colorize(nowide::cerr);
+    }
 }
 
 }  // puppetdb_cli

@@ -41,7 +41,9 @@ main(int argc, char **argv) {
         po::options_description global_options("global options");
         global_options.add_options()
                 ("help,h", "produce help message")
-                ("log-level,l", po::value<logging::log_level>()->default_value(logging::log_level::warning, "warn"),
+                ("log-level,l",
+                 po::value<logging::log_level>()->default_value(logging::log_level::warning,
+                                                                "warn"),
                  "Set logging level.\n"
                  "Supported levels are: none, trace, debug, info, warn, error, and fatal.")
                 ("version,v", "print the version and exit");
@@ -66,7 +68,7 @@ main(int argc, char **argv) {
 
         po::options_description export_subcommand_options("export subcommand options");
         export_subcommand_options.add_options()
-                ("path", po::value<string>()->default_value("./pdb-export.tgz"),
+                ("outfile", po::value<string>()->default_value("./pdb-export.tgz"),
                  "path to create PuppetDB archive")
                 ("anonymization", po::value<string>()->default_value("none"),
                  "anonymization for the PuppetDB archive");
@@ -132,10 +134,9 @@ main(int argc, char **argv) {
             const json::JsonContainer query{ vm["query"].as<string>() };
             puppetdb_cli::pdb_query(config, query);
         } else if (subcommand ==  "export") {
-            nowide::cout << "Exporting PuppetDB..." << endl;
-            const auto path = vm["path"].as<string>();
-            puppetdb_cli::pdb_export(config, path, vm["anonymization"].as<string>());
-            nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
+            puppetdb_cli::pdb_export(config,
+                                     vm["outfile"].as<string>(),
+                                     vm["anonymization"].as<string>());
         }
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
