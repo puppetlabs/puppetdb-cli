@@ -21,12 +21,15 @@ namespace json = leatherman::json_container;
 
 void
 help(po::options_description& global_desc,
-     po::options_description& export_subcommand_desc)
+     po::options_description& export_subcommand_desc,
+     po::options_description& import_subcommand_desc)
 {
     nowide::cout << "usage: puppet-db [global] export [options]\n"
+                 << "       puppet-db [global] import [options]\n"
                  << "       puppet-db [global] query <query>\n\n"
                  << global_desc << "\n"
-                 << export_subcommand_desc;
+                 << export_subcommand_desc << "\n"
+                 << import_subcommand_desc << endl;
 }
 
 int
@@ -73,6 +76,13 @@ main(int argc, char **argv) {
                 ("anonymization", po::value<string>()->default_value("none"),
                  "anonymization for the PuppetDB archive");
 
+        po::options_description import_subcommand_options("import subcommand options");
+        import_subcommand_options.add_options()
+                ("infile", po::value<string>(),
+                 "the file to import into PuppetDB")
+                ("command-versions", po::value<string>(),
+                 "command versions to use for import");
+
         po::variables_map vm;
 
         try {
@@ -85,7 +95,9 @@ main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("help") || vm["subcommand"].empty()) {
-                help(global_options, export_subcommand_options);
+                help(global_options,
+                     export_subcommand_options,
+                     import_subcommand_options);
                 return EXIT_SUCCESS;
             }
 
@@ -95,9 +107,14 @@ main(int argc, char **argv) {
             }
 
             const auto subcommand = vm["subcommand"].as<string>();
-            if ((!(subcommand == "query") && !(subcommand == "export"))
-                || ((subcommand == "query") && vm["subargs"].empty())) {
-                help(global_options, export_subcommand_options);
+            if ((!(subcommand == "query") &&
+                 !(subcommand == "export") &&
+                 !(subcommand == "import"))
+                || (((subcommand == "query") || (subcommand == "import"))
+                    && vm["subargs"].empty())) {
+                help(global_options,
+                     export_subcommand_options,
+                     import_subcommand_options);
                 return EXIT_FAILURE;
             }
 
@@ -106,12 +123,15 @@ main(int argc, char **argv) {
             vector<string> opts = po::collect_unrecognized(parsed.options,
                                                            po::include_positional);
             opts.erase(opts.begin());
-            if (subcommand == "query") {
+            if (subcommand == "query"){
                 po::store(po::command_line_parser(opts).options(query_subcommand_options)
                           .positional(query_positional_options)
                           .run(), vm);
             } else if (subcommand == "export") {
                 po::store(po::command_line_parser(opts).options(export_subcommand_options)
+                          .run(), vm);
+            } else if (subcommand == "import") {
+                po::store(po::command_line_parser(opts).options(import_subcommand_options)
                           .run(), vm);
             }
 
@@ -120,7 +140,9 @@ main(int argc, char **argv) {
             logging::colorize(nowide::cerr, logging::log_level::error);
             nowide::cerr << "error: " << ex.what() << "\n" << endl;
             logging::colorize(nowide::cerr);
-            help(global_options, export_subcommand_options);
+            help(global_options,
+                 export_subcommand_options,
+                 import_subcommand_options);
             return EXIT_FAILURE;
         }
 
@@ -133,10 +155,14 @@ main(int argc, char **argv) {
         if (subcommand == "query") {
             const json::JsonContainer query{ vm["query"].as<string>() };
             puppetdb_cli::pdb_query(config, query);
-        } else if (subcommand ==  "export") {
+        } else if (subcommand == "export") {
             puppetdb_cli::pdb_export(config,
                                      vm["outfile"].as<string>(),
                                      vm["anonymization"].as<string>());
+        } else if (subcommand == "import") {
+            puppetdb_cli::pdb_import(config,
+                                     vm["infile"].as<string>(),
+                                     vm["command-versions"].as<string>());
         }
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);

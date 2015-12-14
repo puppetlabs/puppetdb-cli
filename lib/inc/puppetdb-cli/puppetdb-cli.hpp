@@ -49,4 +49,18 @@ pdb_export(const leatherman::json_container::JsonContainer& config,
            const std::string& path,
            const std::string& anonymization);
 
+/**
+ * Upload a PuppetDB archive to an instance of PuppetDB.
+ * @param config JsonContainer of the CLI configuration.
+ * @param infile string path to archive file for upload.
+ * @param command_versions string json object containing PuppetDB command
+ * versions to use on import.
+ * Example: '{"replace_facts":4,"store_report":6,"replace_catalog":7}'
+*/
+
+void LIBPUPPETDB_CLI_EXPORT
+pdb_import(const leatherman::json_container::JsonContainer& config,
+           const std::string& infile,
+           const std::string& command_versions);
+
 }  // namespace puppetdb_cli
