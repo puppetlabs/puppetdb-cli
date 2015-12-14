@@ -4,6 +4,7 @@
 import os
 import sys
 import cli_lib
+import datetime
 import random
 from itertools import islice
 
@@ -43,8 +44,8 @@ def cli_status(cli):
 
 
 def cli_export(cli, outfile='puppet-db.tar.gz'):
-
-    cli_lib.show_progress(13,"Writing '"+cli_lib.add_color(outfile,'blue')+"'",0)
+    cli_lib.show_progress(13,"Triggering export to '"+cli_lib.add_color(outfile,'blue')+"' at " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" ",0)
+    cli_lib.show_progress(13,"Finised export to '"+cli_lib.add_color(outfile,'blue')+"' at " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" ",0)
 
 if __name__ == '__main__':
     command = os.path.splitext(os.path.basename(__file__))[0]
