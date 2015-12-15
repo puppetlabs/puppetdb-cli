@@ -133,7 +133,7 @@ pdb_export(const json::JsonContainer& config,
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
     nowide::cout << "Exporting PuppetDB..." << endl;
     const CURLcode curl_code = curl_easy_perform(curl.get());
-    int http_code = 0;
+    long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
     if (http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK) {
         nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
