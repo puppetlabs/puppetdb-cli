@@ -102,6 +102,10 @@ write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
+size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
+    return size * nmemb;
+}
+
 unique_ptr<CURL, function<void(CURL*)> >
 pdb_curl_handler(const json::JsonContainer& config) {
     const auto cacert = config.getWithDefault<string>("cacert", "");
@@ -142,6 +146,41 @@ pdb_export(const json::JsonContainer& config,
         nowide::cerr << "error: failed to download PuppetDB archive" << endl;
         logging::colorize(nowide::cerr);
     }
+}
+
+void pdb_import(const json::JsonContainer& config,
+                const string& infile,
+                const string& command_versions) {
+    auto curl = pdb_curl_handler(config);
+    curl_httppost* formpost = NULL;
+    curl_httppost* lastptr = NULL;
+
+    const string server_url = pdb_server_url(config) + "/pdb/admin/v1/archive";
+
+    curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "archive",
+                 CURLFORM_FILE, infile.c_str(), CURLFORM_END);
+    curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "command_versions",
+                 CURLFORM_COPYCONTENTS, command_versions.c_str(), CURLFORM_END);
+
+    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+    curl_easy_setopt(curl.get(), CURLOPT_HTTPPOST, formpost);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_body);
+
+    boost::nowide::cout << "Importing " << infile << " to PuppetDB..." << endl;
+
+    const CURLcode curl_code = curl_easy_perform(curl.get());
+    long http_code = 0;
+    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+
+    if (http_code == 200 && curl_code == CURLE_OK) {
+      nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
+    } else {
+      colorize(nowide::cerr, logging::log_level::fatal);
+      nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
+      logging::colorize(nowide::cerr);
+    }
+
+    curl_formfree(formpost);
 }
 
 }  // puppetdb_cli
