@@ -29,6 +29,8 @@ def process_cli_arguments(cli, arguments):
 
 
 def cli_status(cli):
+    cli_lib.show_progress(5,"Connecting to PuppetDB at 'pdb001.infra.rg-bank.com'")
+    cli_lib.show_progress(2,"Using PostgreSQL instance 'pdb-prod'")
     print"""{
     "detail_level": "info",
      "service_status_version": 1,
@@ -44,6 +46,8 @@ def cli_status(cli):
 
 
 def cli_export(cli, outfile='puppet-db.tar.gz'):
+    cli_lib.show_progress(5,"Connecting to PuppetDB at 'pdb001.infra.rg-bank.com'")
+    cli_lib.show_progress(2,"Using PostgreSQL instance 'pdb-prod'")
     cli_lib.show_progress(13,"Triggering export to '"+cli_lib.add_color(outfile,'blue')+"' at " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" ",0)
     cli_lib.show_progress(13,"Finised export to '"+cli_lib.add_color(outfile,'blue')+"' at " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")+" ",0)
 
