@@ -8,9 +8,6 @@
 
 #include <leatherman/logging/logging.hpp>
 #include <leatherman/json_container/json_container.hpp>
-#include <leatherman/curl/client.hpp>
-#include <leatherman/curl/request.hpp>
-#include <leatherman/curl/response.hpp>
 #include <leatherman/file_util/file.hpp>
 
 #include <puppetdb-cli/version.h>
@@ -52,48 +49,10 @@ parse_config() {
     }
 }
 
-curl::client
-pdb_client(const json::JsonContainer& config) {
-    auto cacert = config.getWithDefault<string>("cacert", "");
-    auto cert = config.getWithDefault<string>("cert", "");
-    auto key = config.getWithDefault<string>("key", "");
-    curl::client client;
-    client.set_ca_cert(cacert);
-    client.set_client_cert(cert, key);
-    return client;
-}
-
 string
 pdb_server_url(const json::JsonContainer& config) {
     const auto server_urls = config.get< vector<string> >("server_urls");
     return server_urls.size() ? server_urls[0] : "http://127.0.0.1:8080";
-}
-
-curl::request
-pdb_query_request(const string& server_url,
-                  const json::JsonContainer& query) {
-    json::JsonContainer request_body;
-    if (!query.empty()) request_body.set("query", query);
-    curl::request request(server_url + "/pdb/query/v4");
-    request.body(request_body.toString(), "application/json");
-    return request;
-}
-
-void
-pdb_query(const json::JsonContainer& config,
-          const json::JsonContainer& query) {
-    const auto server_url = pdb_server_url(config);
-    const auto response = pdb_client(config)
-            .post(pdb_query_request(server_url, query));
-    if (response.status_code() >= 200 && response.status_code() < 300) {
-        json::JsonContainer response_body(response.body());
-        nowide::cout << response_body.toString() << endl;
-    } else {
-        logging::colorize(nowide::cerr, logging::log_level::error);
-        nowide::cerr << "error: " << response.body() << endl;
-        logging::colorize(nowide::cerr);
-    }
-    return;
 }
 
 size_t
@@ -119,6 +78,29 @@ pdb_curl_handler(const json::JsonContainer& config) {
     if (cert != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert.c_str());
     if (key != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key.c_str());
     return curl;
+}
+
+void
+pdb_query(const json::JsonContainer& config,
+          const json::JsonContainer& query) {
+    auto curl = pdb_curl_handler(config);
+    const auto server_url = pdb_server_url(config) +
+                            "/pdb/query/v4" +
+                            "?query=" +
+                            query.toString();
+
+    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
+
+    const CURLcode curl_code = curl_easy_perform(curl.get());
+    long http_code = 0;
+    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+    if (!(http_code == 200 && curl_code == CURLE_OK)) {
+        logging::colorize(nowide::cerr, logging::log_level::fatal);
+        nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
+        logging::colorize(nowide::cerr);
+    }
 }
 
 void
@@ -175,7 +157,7 @@ void pdb_import(const json::JsonContainer& config,
     if (http_code == 200 && curl_code == CURLE_OK) {
       nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
     } else {
-      colorize(nowide::cerr, logging::log_level::fatal);
+      logging::colorize(nowide::cerr, logging::log_level::fatal);
       nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
       logging::colorize(nowide::cerr);
     }
