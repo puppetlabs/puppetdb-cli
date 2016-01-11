@@ -21,7 +21,7 @@ target_link_libraries(puppet-db
     ${LEATHERMAN_LIBRARIES}
 )
 
-install(TARGETS puppet-db DESTINATION bin)
+leatherman_install(puppet-db)
 
 # Tests for the executable. These don't verify behavior, simply that the
 # executable runs without crashing or generating an error. Useful, but should be
