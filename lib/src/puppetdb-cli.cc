@@ -82,12 +82,13 @@ pdb_curl_handler(const json::JsonContainer& config) {
 
 void
 pdb_query(const json::JsonContainer& config,
-          const json::JsonContainer& query) {
+          const string& query) {
     auto curl = pdb_curl_handler(config);
+    const string url_encoded_query = curl_easy_escape(curl.get(), query.c_str(), query.length());
     const auto server_url = pdb_server_url(config) +
-                            "/pdb/query/v4" +
-                            "?query=" +
-                            query.toString();
+            "/pdb/query/v4" +
+            "?query=" +
+            url_encoded_query;
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);

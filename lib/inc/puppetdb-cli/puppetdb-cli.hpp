@@ -30,12 +30,12 @@ parse_config();
 /**
  * Query a PuppetDB endpoint for a given config.
  * @param config JsonContainer of the cli configuration.
- * @param query JsonContainer of the query for PuppetDB.
+ * @param query string of the query for PuppetDB (can be either AST or PQL syntax).
  * @return A leatherman::curl::response of the response from a PuppetDB query.
  */
 void LIBPUPPETDB_CLI_EXPORT
 pdb_query(const leatherman::json_container::JsonContainer& config,
-          const leatherman::json_container::JsonContainer& query);
+          const std::string& query);
 
 /**
  * Export a PuppetDB archive for a given config.
