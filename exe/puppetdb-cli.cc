@@ -153,7 +153,7 @@ main(int argc, char **argv) {
         const auto subcommand = vm["subcommand"].as<string>();
         const auto config = puppetdb_cli::parse_config();
         if (subcommand == "query") {
-            const json::JsonContainer query{ vm["query"].as<string>() };
+            const auto query = vm["query"].as<string>();
             puppetdb_cli::pdb_query(config, query);
         } else if (subcommand == "export") {
             puppetdb_cli::pdb_export(config,
