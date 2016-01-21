@@ -9,14 +9,12 @@
 #include <boost/filesystem/fstream.hpp>
 #pragma GCC diagnostic pop
 #include <leatherman/logging/logging.hpp>
-#include <leatherman/json_container/json_container.hpp>
 #include <puppetdb-cli/puppetdb-cli.hpp>
 
 using namespace std;
 namespace nowide = boost::nowide;
 namespace po = boost::program_options;
 namespace logging = leatherman::logging;
-namespace json = leatherman::json_container;
 
 void
 help(po::options_description& global_desc,
@@ -25,7 +23,6 @@ help(po::options_description& global_desc,
 {
     nowide::cout << "usage: puppet-db [global] export [options]\n"
                  << "       puppet-db [global] import [options]\n"
-                 << "       puppet-db [global] query <query>\n\n"
                  << global_desc << "\n"
                  << export_subcommand_desc << "\n"
                  << import_subcommand_desc << endl;
@@ -59,14 +56,6 @@ main(int argc, char **argv) {
 
         po::positional_options_description positional_options;
         positional_options.add("subcommand", 1).add("subargs", -1);
-
-        po::options_description query_subcommand_options("query subcommand options");
-        query_subcommand_options.add_options()
-                ("query", po::value<string>()->default_value(""),
-                 "query PuppetDB data");
-
-        po::positional_options_description query_positional_options;
-        query_positional_options.add("query", 1);
 
         po::options_description export_subcommand_options("export subcommand options");
         export_subcommand_options.add_options()
@@ -106,11 +95,9 @@ main(int argc, char **argv) {
             }
 
             const auto subcommand = vm["subcommand"].as<string>();
-            if ((!(subcommand == "query") &&
-                 !(subcommand == "export") &&
+            if ((!(subcommand == "export") &&
                  !(subcommand == "import"))
-                || (((subcommand == "query") || (subcommand == "import"))
-                    && vm["subargs"].empty())) {
+                || ((subcommand == "import") && vm["subargs"].empty())) {
                 help(global_options,
                      export_subcommand_options,
                      import_subcommand_options);
@@ -122,11 +109,7 @@ main(int argc, char **argv) {
             vector<string> opts = po::collect_unrecognized(parsed.options,
                                                            po::include_positional);
             opts.erase(opts.begin());
-            if (subcommand == "query"){
-                po::store(po::command_line_parser(opts).options(query_subcommand_options)
-                          .positional(query_positional_options)
-                          .run(), vm);
-            } else if (subcommand == "export") {
+            if (subcommand == "export") {
                 po::store(po::command_line_parser(opts).options(export_subcommand_options)
                           .run(), vm);
             } else if (subcommand == "import") {
@@ -151,10 +134,7 @@ main(int argc, char **argv) {
 
         const auto subcommand = vm["subcommand"].as<string>();
         const auto config = puppetdb_cli::parse_config();
-        if (subcommand == "query") {
-            const auto query = vm["query"].as<string>();
-            puppetdb_cli::pdb_query(config, query);
-        } else if (subcommand == "export") {
+        if (subcommand == "export") {
             puppetdb_cli::pdb_export(config,
                                      vm["outfile"].as<string>(),
                                      vm["anonymization"].as<string>());
