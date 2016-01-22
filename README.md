@@ -1,5 +1,16 @@
 # puppetdb-cli
 
+> **Note**: This repository is still under active development. Stay tuned for
+> release dates and functionality changes.
+
+The PuppetDB CLI project provide Puppet subcommands for querying PuppetDB data,
+via `puppet query <query>`, and PuppetDB administrative tasks, `puppet db
+<import|export|status>`. The `query` subcommand will allow you to query PuppetDB
+using either the upcoming PQL syntax of the traditional PuppetDB query syntax
+(also known as AST). The `db` subcommand is a replacement for the older
+`puppetdb <export|import>` commands with faster startup times and much
+friendlier error messages.
+
 ## Usage
 
 Example usage:
@@ -10,7 +21,7 @@ Example usage:
     $ mkdir build && cd build
     $ CMAKE_PREFIX_PATH=/usr/local/opt/curl/lib cmake ..
     $ make -j
-    $ ./bin/puppet-db query '["from","reports",["extract","certname"]]'
+    $ ./bin/puppet-query '["from","reports",["extract","certname"]]'
     [{"certname":"host-1"}]
  
 ~~~
