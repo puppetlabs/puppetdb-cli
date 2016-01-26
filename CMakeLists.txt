@@ -36,7 +36,14 @@ find_package(CURL REQUIRED)
 
 if (CURL_STATIC)
     add_definitions(-DCURL_STATICLIB)
+    if (WIN32)
+      # Linking statically on Windows requires some extra libraries.
+      set(CURL_DEPS wldap32.lib ws2_32.lib)
+    endif()
 endif()
+
+list(APPEND CURL_LIBRARIES ${CURL_DEPS})
+export_var(CURL_LIBRARIES)
 
 # Display a summary of the features
 include(FeatureSummary)
@@ -51,7 +58,6 @@ set(LEATHERMAN_USE_UTIL TRUE)
 set(LEATHERMAN_USE_FILE_UTIL TRUE)
 set(LEATHERMAN_USE_RAPIDJSON TRUE)
 set(LEATHERMAN_USE_JSON_CONTAINER TRUE)
-set(LEATHERMAN_USE_CURL TRUE)
 add_subdirectory("vendor/leatherman")
 
 add_subdirectory(lib)

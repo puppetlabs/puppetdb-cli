@@ -10,7 +10,8 @@ leatherman_logging_namespace("puppetlabs.${PROJECT_NAME}.command")
 include_directories(
     ../lib/inc
     ${Boost_INCLUDE_DIRS}
-    ${LEATHERMAN_INCLUDE_DIRS}
+    ${LEATHERMAN_LOGGING_INCLUDE}
+    ${LEATHERMAN_JSON_CONTAINER_INCLUDE}
 )
 
 add_executable(puppet-db ${PROJECT_NAME}.cc)
@@ -18,7 +19,8 @@ target_link_libraries(puppet-db
     lib${PROJECT_NAME}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
-    ${LEATHERMAN_LIBRARIES}
+    ${LEATHERMAN_LOGGING_LIB}
+    ${LEATHERMAN_JSON_CONTAINER_LIB}
 )
 
 leatherman_install(puppet-db)
