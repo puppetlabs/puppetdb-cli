@@ -1,0 +1,28 @@
+[
+  {
+    "deactivated" : null,
+    "latest_report_hash" : "36bd2a24153b950807be3ff754e65788042dc1bc",
+    "facts_environment" : "production",
+    "report_environment" : "production",
+    "catalog_environment" : "production",
+    "facts_timestamp" : "2015-11-06T13:32:48.861Z",
+    "expired" : null,
+    "report_timestamp" : "2015-11-06T13:04:16.434Z",
+    "certname" : "host-3",
+    "catalog_timestamp" : "2015-11-06T13:32:49.150Z",
+    "latest_report_status" : "changed"
+  },
+  {
+    "deactivated" : true,
+    "latest_report_hash" : "36bd2a24153b950807be3ff754e65788042dc1bc",
+    "facts_environment" : "production",
+    "report_environment" : "production",
+    "catalog_environment" : "production",
+    "facts_timestamp" : "2015-11-06T13:32:48.861Z",
+    "expired" : null,
+    "report_timestamp" : "2015-11-06T13:04:16.434Z",
+    "certname" : "host-4",
+    "catalog_timestamp" : "2015-11-06T13:32:49.150Z",
+    "latest_report_status" : "changed"
+  }
+]

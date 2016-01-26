@@ -1,0 +1,33 @@
+[
+  {
+    "tags": [
+      "puppet_enterprise::puppetdb::service",
+      "puppet_enterprise::puppetdb",
+      "class",
+      "profile",
+      "puppetdb",
+      "puppet_enterprise::profile::puppetdb",
+      "puppet_enterprise",
+      "service",
+      "pe-puppetdb",
+      "default",
+      "node"
+    ],
+    "file": "/opt/puppetlabs/puppet/modules/puppet_enterprise/manifests/puppetdb/service.pp",
+    "type": "Service",
+    "title": "pe-puppetdb",
+    "line": 6,
+    "resource": "5591b79064bc57756c530accfe02371ec2ebd408",
+    "environment": "production",
+    "certname": "puppet.rg-bank.com",
+    "parameters": {
+      "enable": true,
+      "ensure": "running",
+      "subscribe": [
+        "Class[Puppet_enterprise::Puppetdb::Database_ini]",
+        "Class[Puppet_enterprise::Puppetdb::Jetty_ini]"
+      ]
+    },
+    "exported": false
+  }
+]
