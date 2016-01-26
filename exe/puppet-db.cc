@@ -82,15 +82,15 @@ main(int argc, char **argv) {
 
             po::store(parsed, vm);
 
+            if (vm.count("version")) {
+                nowide::cout << puppetdb_cli::version() << endl;
+                return EXIT_SUCCESS;
+            }
+
             if (vm.count("help") || vm["subcommand"].empty()) {
                 help(global_options,
                      export_subcommand_options,
                      import_subcommand_options);
-                return EXIT_SUCCESS;
-            }
-
-            if (vm.count("version")) {
-                nowide::cout << puppetdb_cli::version() << endl;
                 return EXIT_SUCCESS;
             }
 
