@@ -8,8 +8,6 @@
 #include "export.h"
 
 #include <leatherman/json_container/json_container.hpp>
-#include <leatherman/curl/response.hpp>
-#include <leatherman/curl/client.hpp>
 
 namespace puppetdb_cli {
 
@@ -31,7 +29,7 @@ parse_config();
  * Query a PuppetDB endpoint for a given config.
  * @param config JsonContainer of the cli configuration.
  * @param query string of the query for PuppetDB (can be either AST or PQL syntax).
- * @return A leatherman::curl::response of the response from a PuppetDB query.
+ * @return This function does not return anything.
  */
 void LIBPUPPETDB_CLI_EXPORT
 pdb_query(const leatherman::json_container::JsonContainer& config,

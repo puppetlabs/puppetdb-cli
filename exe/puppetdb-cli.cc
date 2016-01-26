@@ -9,7 +9,6 @@
 #include <boost/filesystem/fstream.hpp>
 #pragma GCC diagnostic pop
 #include <leatherman/logging/logging.hpp>
-#include <leatherman/curl/response.hpp>
 #include <leatherman/json_container/json_container.hpp>
 #include <puppetdb-cli/puppetdb-cli.hpp>
 

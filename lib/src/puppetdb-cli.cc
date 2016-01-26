@@ -21,7 +21,6 @@ namespace nowide = boost::nowide;
 namespace json = leatherman::json_container;
 namespace futil = leatherman::file_util;
 namespace logging = leatherman::logging;
-namespace curl = leatherman::curl;
 
 string
 version()

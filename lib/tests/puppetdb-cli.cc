@@ -1,5 +1,4 @@
 #include <catch.hpp>
-#include <curl/curl.h>
 #include <puppetdb-cli/version.h>
 #include <puppetdb-cli/puppetdb-cli.hpp>
 
