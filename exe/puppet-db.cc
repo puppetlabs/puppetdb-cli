@@ -95,8 +95,7 @@ main(int argc, char **argv) {
             }
 
             const auto subcommand = vm["subcommand"].as<string>();
-            if ((!(subcommand == "export") &&
-                 !(subcommand == "import"))
+            if (((subcommand != "export") && (subcommand != "import"))
                 || ((subcommand == "import") && vm["subargs"].empty())) {
                 help(global_options,
                      export_subcommand_options,
