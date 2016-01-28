@@ -34,15 +34,21 @@ parse_config() {
     const string pdbrc_path
     { futil::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
     const string default_config_str
-    { "{\"environments\":{\"dev\":{\"server_urls\":[\"http://127.0.0.1:8080\"]}}}" };
+    { "{\"puppetdb\":{\"server_urls\":\"http://127.0.0.1:8080\"}}" };
     const json::JsonContainer default_config(default_config_str);
     if (fs::exists(pdbrc_path)) {
-        const json::JsonContainer raw_config(futil::read(pdbrc_path));
-        const auto host = raw_config
-                .getWithDefault<string>("default_environment", "dev");
-        return raw_config
-                .getWithDefault<json::JsonContainer>({"environments", host},
-                                                     default_config);
+        try {
+            const json::JsonContainer raw_config(futil::read(pdbrc_path));
+            return raw_config
+                    .getWithDefault<json::JsonContainer>("puppetdb", default_config);
+        } catch (exception& ex) {
+            logging::colorize(nowide::cerr, logging::log_level::fatal);
+            nowide::cerr << "error parsing config: "
+                         << ex.what() << "\n"
+                         << "falling back to default configuration" << "\n" << endl;
+            logging::colorize(nowide::cerr);
+            return default_config;
+        }
     } else {
         return default_config;
     }
@@ -50,8 +56,20 @@ parse_config() {
 
 string
 pdb_server_url(const json::JsonContainer& config) {
-    const auto server_urls = config.get< vector<string> >("server_urls");
-    return server_urls.size() ? server_urls[0] : "http://127.0.0.1:8080";
+    const auto server_urls_datatype = config.type("server_urls");
+    if (server_urls_datatype == json::DataType::Array) {
+        const auto server_urls = config.get< vector<string> >("server_urls");
+        return server_urls.size() ? server_urls[0] : "http://127.0.0.1:8080";
+    } else if (server_urls_datatype == json::DataType::String){
+        return config.get< string >("server_urls");
+    } else {
+        logging::colorize(nowide::cerr, logging::log_level::fatal);
+        nowide::cerr << "error: unrecognized JSON type for key 'server_urls'." << "\n"
+                     << "Please use a JSON array or string."<< "\n"
+                     << "falling back to default configuration" << "\n"<< endl;
+        logging::colorize(nowide::cerr);
+        return "http://127.0.0.1:8080";
+    }
 }
 
 size_t

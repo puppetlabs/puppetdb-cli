@@ -29,18 +29,30 @@ Example file to place at `~/.puppetlabs/client-tools/puppetdb.conf`:
 ~~~json
 
     {
-        "default_environment":"prod",
-        "environments":{
-            "prod":{
-                "server_urls":[ "https://alpha-rho.local:8081" ],
-                "ca":"<path to ca.pem>",
-                "cert":"<path to cert .pem>",
-                "key":"<path to private-key .pem>"
-            },
-            "dev":{
-                "server_urls":[ "http://localhost:8080" ]
-            }
-        }
+       "puppetdb":{
+                     "server_urls":"https://alpha-rho.local:8081",
+                     "ca":"<path to ca.pem>",
+                     "cert":"<path to cert .pem>",
+                     "key":"<path to private-key .pem>"
+                  }
+    }
+
+~~~
+
+or to specify multiple PuppetDB servers for failover:
+
+~~~json
+
+    {
+       "puppetdb":{
+                     "server_urls":[
+                                     "https://alpha-rho.local:8081",
+                                     "https://beta-theta.local:8081",
+                                   ],
+                     "ca":"<path to ca.pem>",
+                     "cert":"<path to cert .pem>",
+                     "key":"<path to private-key .pem>"
+                  }
     }
 
 ~~~
