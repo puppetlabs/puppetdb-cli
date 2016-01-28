@@ -17,11 +17,7 @@ Example usage:
 
 ~~~bash
 
-    $ git submodule update --init
-    $ mkdir build && cd build
-    $ CMAKE_PREFIX_PATH=/usr/local/opt/curl/lib cmake ..
-    $ make -j
-    $ ./bin/puppet-query '["from","reports",["extract","certname"]]'
+    $ puppet-query '["from","reports",["extract","certname"]]'
     [{"certname":"host-1"}]
  
 ~~~
@@ -48,3 +44,19 @@ Example file to place at `~/.puppetlabs/client-tools/puppetdb.conf`:
     }
 
 ~~~
+
+## Install from source
+
+Make sure the appropriate version of leatherman is installed on your system.
+
+~~~bash
+
+      $ mkdir build
+      $ cmake build
+      $ make -C build -j2
+ 
+~~~
+
+if you don't want to install leatherman globally or need to build with a
+different version of curl or openssl (looking at you OSX) you can use
+`CMAKE_PREFIX_PATH=<paths to deps> cmake build` in the steps above.
