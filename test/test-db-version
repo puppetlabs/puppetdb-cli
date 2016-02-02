@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -xeo pipefail
+
+# A way to find the source directory
+#srcdir="$(cd $(dirname "$0")/.. && pwd)"
+
+test -e version
+test -x bin/puppet-db
+
+# We don't need the tmpdir for this PR, but here's how you can handle
+# it, which also allows fully parallel testing.
+#mkdir -p tmp
+#tmpdir="$(mktemp -d "tmp/$(basename $0)-XXXXXX")"
+
+expected="$(cat version)"
+actual="$(bin/puppet-db --version)"
+# Does the output start with "version "
+test "$expected " = "${actual:0:${#expected}} "
+
+#rm -r "$tmpdir"

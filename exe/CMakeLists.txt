@@ -32,15 +32,3 @@ target_link_libraries(puppet-db
 )
 
 leatherman_install(puppet-query puppet-db)
-
-# Tests for the executable. These don't verify behavior, simply that the
-# executable runs without crashing or generating an error. Useful, but should be
-# enhanced with test scripts and/or acceptance tests.
-
-# We duplicate the `help_test` as `smoke_test` until the default functionality
-# of the tool has been nailed down.
-add_test(NAME "db_smoke_test" COMMAND puppet-db)
-add_test(NAME "db_help_test" COMMAND puppet-db --help)
-add_test(NAME "db_version_test" COMMAND puppet-db --version)
-add_test(NAME "query_help_test" COMMAND puppet-query --help)
-add_test(NAME "query_version_test" COMMAND puppet-query --version)

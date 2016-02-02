@@ -82,6 +82,11 @@ main(int argc, char **argv) {
 
             po::store(parsed, vm);
 
+            if (vm.count("version")) {
+                nowide::cout << puppetdb_cli::version() << endl;
+                return EXIT_SUCCESS;
+            }
+
             if (vm.count("help") || vm["subcommand"].empty()) {
                 help(global_options,
                      export_subcommand_options,
@@ -89,14 +94,8 @@ main(int argc, char **argv) {
                 return EXIT_SUCCESS;
             }
 
-            if (vm.count("version")) {
-                nowide::cout << puppetdb_cli::version() << endl;
-                return EXIT_SUCCESS;
-            }
-
             const auto subcommand = vm["subcommand"].as<string>();
-            if ((!(subcommand == "export") &&
-                 !(subcommand == "import"))
+            if (((subcommand != "export") && (subcommand != "import"))
                 || ((subcommand == "import") && vm["subargs"].empty())) {
                 help(global_options,
                      export_subcommand_options,

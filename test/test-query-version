@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -xeo pipefail
+
+test -e version
+test -x bin/puppet-query
+
+expected="$(cat version)"
+actual="$(bin/puppet-query --version)"
+test "$expected " = "${actual:0:${#expected}} "

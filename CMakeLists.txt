@@ -2,6 +2,8 @@
 cmake_minimum_required(VERSION 3.2.2)
 project(puppetdb-cli VERSION 0.1.0)
 
+configure_file("${CMAKE_SOURCE_DIR}/version.in" "${CMAKE_BINARY_DIR}/version")
+
 string(MAKE_C_IDENTIFIER ${PROJECT_NAME} PROJECT_C_NAME)
 string(TOUPPER ${PROJECT_C_NAME} PROJECT_NAME_UPPER)
 string(TOLOWER ${PROJECT_C_NAME} PROJECT_NAME_LOWER)
@@ -58,3 +60,17 @@ enable_cpplint()
 add_cppcheck_dirs("${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/exe")
 enable_cppcheck()
 
+
+# We duplicate the `help_test` as `smoke_test` until the default functionality
+# of the tool has been nailed down.
+add_test(NAME "db_smoke_test" COMMAND puppet-db)
+add_test(NAME "db_help_test" COMMAND puppet-db --help)
+add_test(NAME "query_help_test" COMMAND puppet-query --help)
+
+if (NOT WIN32)
+  add_test(test-db-version test/test-db-version)
+  add_test(test-query-version test/test-query-version)
+else()
+  add_test(NAME "db_version_test" COMMAND puppet-db --version)
+  add_test(NAME "query_version_test" COMMAND puppet-query --version)
+endif()
