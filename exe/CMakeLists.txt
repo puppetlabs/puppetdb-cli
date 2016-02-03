@@ -4,11 +4,12 @@
 set(CMAKE_CXX_FLAGS ${${PROJECT_NAME_UPPER}_CXX_FLAGS})
 
 # Set prefix for logging messages.
-leatherman_logging_namespace("puppetlabs.${PROJECT_NAME}.command")
+leatherman_logging_namespace("puppetlabs.puppetdb.command")
 
 # Setup compiling the executable.
 include_directories(
     ../lib/inc
+    ${CURL_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${LEATHERMAN_LOGGING_INCLUDE}
     ${LEATHERMAN_JSON_CONTAINER_INCLUDE}
@@ -16,7 +17,7 @@ include_directories(
 
 add_executable(puppet-query puppet-query.cc)
 target_link_libraries(puppet-query
-    lib${PROJECT_NAME}
+    libpuppetdb
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${LEATHERMAN_LIBRARIES}
@@ -24,7 +25,7 @@ target_link_libraries(puppet-query
 
 add_executable(puppet-db puppet-db.cc)
 target_link_libraries(puppet-db
-    lib${PROJECT_NAME}
+    libpuppetdb
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${LEATHERMAN_LOGGING_LIB}

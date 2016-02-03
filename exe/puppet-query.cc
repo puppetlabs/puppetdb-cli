@@ -65,7 +65,7 @@ main(int argc, char **argv) {
             }
 
             if (vm.count("version")) {
-                nowide::cout << puppetdb_cli::version() << endl;
+                nowide::cout << puppetdb::version() << endl;
                 return EXIT_SUCCESS;
             }
 
@@ -82,9 +82,9 @@ main(int argc, char **argv) {
         const auto lvl = vm["log-level"].as<logging::log_level>();
         logging::set_level(lvl);
 
-        const auto config = puppetdb_cli::parse_config();
+        const auto pdb_conn = puppetdb::get_puppetdb("");
         const auto query = vm["query"].as<string>();
-        puppetdb_cli::pdb_query(config, query);
+        puppetdb::pdb_query(pdb_conn, query);
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "unhandled exception: " << ex.what() << "\n" << endl;

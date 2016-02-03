@@ -14,7 +14,7 @@ configure_file("namespaces.dox.in" "${CMAKE_CURRENT_LIST_DIR}/docs/namespaces.do
 set(CMAKE_CXX_FLAGS ${${PROJECT_NAME_UPPER}_CXX_FLAGS})
 
 # Set prefix for logging messages.
-leatherman_logging_namespace("puppetlabs.${PROJECT_NAME}")
+leatherman_logging_namespace("puppetlabs.puppetdb")
 
 # Setup compiling the library.
 include_directories(
@@ -31,17 +31,17 @@ set(PROJECT_SOURCES "src/${PROJECT_NAME}.cc")
 add_library(libprojectsrc OBJECT ${PROJECT_SOURCES})
 set_target_properties(libprojectsrc PROPERTIES POSITION_INDEPENDENT_CODE true)
 
-add_library(lib${PROJECT_NAME} $<TARGET_OBJECTS:libprojectsrc>)
-set_target_properties(lib${PROJECT_NAME} PROPERTIES VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
-target_link_libraries(lib${PROJECT_NAME}
+add_library(libpuppetdb $<TARGET_OBJECTS:libprojectsrc>)
+set_target_properties(libpuppetdb PROPERTIES VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+target_link_libraries(libpuppetdb
     ${Boost_LIBRARIES}
     ${LEATHERMAN_LIBRARIES}
     ${CURL_LIBRARIES}
 )
 
-symbol_exports(lib${PROJECT_NAME} "${CMAKE_CURRENT_LIST_DIR}/inc/${PROJECT_NAME}/export.h")
+symbol_exports(libpuppetdb "${CMAKE_CURRENT_LIST_DIR}/inc/${PROJECT_NAME}/export.h")
 
-leatherman_install(lib${PROJECT_NAME})
+leatherman_install(libpuppetdb)
 install(DIRECTORY inc/${PROJECT_NAME} DESTINATION include)
 
 add_subdirectory(tests)
