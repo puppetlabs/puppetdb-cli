@@ -3,5 +3,5 @@
 #include <puppetdb-cli/puppetdb-cli.hpp>
 
 SCENARIO("version() returns the version") {
-    REQUIRE(puppetdb_cli::version() == PUPPETDB_CLI_VERSION_WITH_COMMIT);
+    REQUIRE(puppetdb::version() == PUPPETDB_CLI_VERSION_WITH_COMMIT);
 }
