@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <string>
+#include <queue>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+
+#include <rapidjson/reader.h>
+#include <rapidjson/prettywriter.h>
 
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
@@ -106,7 +113,29 @@ PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
     }
 }
 
-size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+class JsonQueue {
+  public:
+    JsonQueue() {};
+    condition_variable cv;
+    mutex cv_m;
+    queue<int> q;
+  private:
+    JsonQueue(const JsonQueue&);
+    JsonQueue& operator=(const JsonQueue&);
+};
+
+size_t write_queue(char *ptr, size_t size, size_t nmemb, JsonQueue& stream) {
+    const size_t written = size * nmemb;
+    unique_lock<mutex> lk(stream.cv_m);
+    for (size_t i = 0; i < written; i++) {
+        stream.q.push(ptr[i]);
+    }
+    lk.unlock();
+    stream.cv.notify_one();
+    return written;
+}
+
+size_t write_data(char *ptr, size_t size, size_t nmemb, FILE *stream) {
     const size_t written = fwrite(ptr, size, nmemb, stream);
     return written;
 }
@@ -115,10 +144,79 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
     return size * nmemb;
 }
 
+
+class JsonQueueWrapper {
+  public:
+    typedef char Ch;
+    JsonQueueWrapper(JsonQueue& stream) : stream_(stream) {}
+    Ch Peek() const { // 1
+        int c = Front();
+        return c == char_traits<char>::eof() ? '\0' : (Ch)c;
+    }
+    Ch Take() { // 2
+        int c = Get();
+        return c == char_traits<char>::eof() ? '\0' : (Ch)c;
+    }
+    size_t Tell() const { return (size_t)stream_.q.size(); } // 3
+    Ch* PutBegin() { assert(false); return 0; }
+    void Put(Ch) { assert(false); }
+    void Flush() { assert(false); }
+    size_t PutEnd(Ch*) { assert(false); return 0; }
+  private:
+    int Front() const {
+        unique_lock<mutex> lk(stream_.cv_m);
+        stream_.cv.wait(lk, [&]{ return !stream_.q.empty(); });
+        int c = stream_.q.front();
+        lk.unlock();
+        return c;
+    };
+    int Get() {
+        unique_lock<mutex> lk(stream_.cv_m);
+        stream_.cv.wait(lk, [&]{ return !stream_.q.empty(); });
+        int c = stream_.q.front();
+        stream_.q.pop();
+        lk.unlock();
+        return c;
+    };
+    JsonQueueWrapper(const JsonQueueWrapper&);
+    JsonQueueWrapper& operator=(const JsonQueueWrapper&);
+    JsonQueue& stream_;
+};
+
+class OStreamWrapper {
+  public:
+    typedef char Ch;
+    OStreamWrapper(std::ostream& os) : os_(os) {
+    }
+    Ch Peek() const { assert(false); return '\0'; }
+    Ch Take() { assert(false); return '\0'; }
+    size_t Tell() const { return 0; }
+    Ch* PutBegin() { assert(false); return 0; }
+    void Put(Ch c) { os_.put(c); }                  // 1
+    void Flush() { os_.flush(); }                   // 2
+    size_t PutEnd(Ch*) { assert(false); return 0; }
+  private:
+    OStreamWrapper(const OStreamWrapper&);
+    OStreamWrapper& operator=(const OStreamWrapper&);
+    std::ostream& os_;
+};
+
+void write_pretty(JsonQueue& stream) {
+    rapidjson::Reader reader;
+    JsonQueueWrapper is(stream);
+    OStreamWrapper os(nowide::cout);
+    rapidjson::PrettyWriter<OStreamWrapper> writer(os);
+    if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
+        nowide::cerr << "error parsing response" << endl;
+    }
+};
+
+
 void
 pdb_query(const PuppetDBConn& conn,
           const string& query_str) {
     auto curl = conn.getCurlHandle();
+
     auto url_encoded_query = unique_ptr< char, function<void(char*)> >(
         curl_easy_escape(curl.get(), query_str.c_str(), query_str.length()),
         curl_free);
@@ -127,11 +225,20 @@ pdb_query(const PuppetDBConn& conn,
             + "/pdb/query/v4?query="
             + url_encoded_query.get();
 
+    JsonQueue stream;
+
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, ref(stream));
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);
+
+    thread t1(write_pretty, ref(stream));
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
+
+    stream.q.push(char_traits<char>::eof());
+    stream.cv.notify_one();
+    t1.join();
+
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
     if (!(http_code == 200 && curl_code == CURLE_OK)) {
