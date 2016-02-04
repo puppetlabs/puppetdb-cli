@@ -3,13 +3,16 @@
 #include <string>
 #include <tuple>
 #include <queue>
-#include <mutex>
-#include <thread>
-#include <condition_variable>
 
 #include <rapidjson/reader.h>
 #include <rapidjson/prettywriter.h>
 
+#define BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/lock_types.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/filesystem.hpp>
@@ -114,10 +117,10 @@ PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
     }
 }
 
-typedef tuple< mutex, condition_variable, queue<int> > JsonQueue;
+typedef tuple< boost::mutex, boost::condition_variable, queue<int> > JsonQueue;
 size_t write_queue(char *ptr, size_t size, size_t nmemb, JsonQueue& stream) {
     const size_t written = size * nmemb;
-    unique_lock<mutex> lk(get<0>(stream));
+    boost::unique_lock<boost::mutex> lk(get<0>(stream));
     for (size_t i = 0; i < written; i++) {
         get<2>(stream).push(ptr[i]);
     }
@@ -155,14 +158,14 @@ class JsonQueueWrapper {
     size_t PutEnd(Ch*) { assert(false); return 0; }
   private:
     int Front() const {
-        unique_lock<mutex> lk(get<0>(stream_));
+        boost::unique_lock<boost::mutex> lk(get<0>(stream_));
         get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
         int c = get<2>(stream_).front();
         lk.unlock();
         return c;
     };
     int Get() {
-        unique_lock<mutex> lk(get<0>(stream_));
+        boost::unique_lock<boost::mutex> lk(get<0>(stream_));
         get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
         int c = get<2>(stream_).front();
         get<2>(stream_).pop();
@@ -219,10 +222,10 @@ pdb_query(const PuppetDBConn& conn,
     JsonQueue stream;
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, ref(stream));
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, boost::ref(stream));
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);
 
-    thread t1(write_pretty, ref(stream));
+    boost::thread t1(write_pretty, boost::ref(stream));
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
 
