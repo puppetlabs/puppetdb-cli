@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <string>
+#include <tuple>
 #include <queue>
 #include <mutex>
 #include <thread>
@@ -113,25 +114,15 @@ PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
     }
 }
 
-class JsonQueue {
-  public:
-    JsonQueue() {};
-    condition_variable cv;
-    mutex cv_m;
-    queue<int> q;
-  private:
-    JsonQueue(const JsonQueue&);
-    JsonQueue& operator=(const JsonQueue&);
-};
-
+typedef tuple< mutex, condition_variable, queue<int> > JsonQueue;
 size_t write_queue(char *ptr, size_t size, size_t nmemb, JsonQueue& stream) {
     const size_t written = size * nmemb;
-    unique_lock<mutex> lk(stream.cv_m);
+    unique_lock<mutex> lk(get<0>(stream));
     for (size_t i = 0; i < written; i++) {
-        stream.q.push(ptr[i]);
+        get<2>(stream).push(ptr[i]);
     }
     lk.unlock();
-    stream.cv.notify_one();
+    get<1>(stream).notify_one();
     return written;
 }
 
@@ -157,24 +148,24 @@ class JsonQueueWrapper {
         int c = Get();
         return c == char_traits<char>::eof() ? '\0' : (Ch)c;
     }
-    size_t Tell() const { return (size_t)stream_.q.size(); } // 3
+    size_t Tell() const { return (size_t)get<2>(stream_).size(); } // 3
     Ch* PutBegin() { assert(false); return 0; }
     void Put(Ch) { assert(false); }
     void Flush() { assert(false); }
     size_t PutEnd(Ch*) { assert(false); return 0; }
   private:
     int Front() const {
-        unique_lock<mutex> lk(stream_.cv_m);
-        stream_.cv.wait(lk, [&]{ return !stream_.q.empty(); });
-        int c = stream_.q.front();
+        unique_lock<mutex> lk(get<0>(stream_));
+        get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
+        int c = get<2>(stream_).front();
         lk.unlock();
         return c;
     };
     int Get() {
-        unique_lock<mutex> lk(stream_.cv_m);
-        stream_.cv.wait(lk, [&]{ return !stream_.q.empty(); });
-        int c = stream_.q.front();
-        stream_.q.pop();
+        unique_lock<mutex> lk(get<0>(stream_));
+        get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
+        int c = get<2>(stream_).front();
+        get<2>(stream_).pop();
         lk.unlock();
         return c;
     };
@@ -235,8 +226,8 @@ pdb_query(const PuppetDBConn& conn,
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
 
-    stream.q.push(char_traits<char>::eof());
-    stream.cv.notify_one();
+    get<2>(stream).push(char_traits<char>::eof());
+    get<1>(stream).notify_one();
     t1.join();
 
     long http_code = 0;
