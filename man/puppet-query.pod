@@ -1,0 +1,51 @@
+=head1 NAME
+
+puppet query - perform ad hoc queries against PuppetDB
+
+=head1 SYNOPSIS
+
+puppet-query [options] <query>
+
+=head1 DESCRIPTION
+
+The C<puppet-query> tool allows you to query PuppetDB using either the AST or
+PQL query languages. To read more about the syntax of PuppetDB queries, please
+consult the documentation at:
+[http://docs.puppetlabs.com/puppetdb/master/api/query/v4/pql.html]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h>,B<--help>
+
+Prints a list of the commands and a brief synopsis of each command. If
+an action is specified, it will print a description of that action and
+the options specific to that action.
+
+=item B<--version>
+
+Displays version information
+
+=back
+
+=head1 EXAMPLES
+
+  ----------------------------------------------------------------------
+  $ puppet-query "nodes { certname = 'host-1' }"
+
+  [
+   {
+      "catalog_environment": "production",
+      "catalog_timestamp": "2016-01-28T18:26:04.023Z",
+      "certname": "host-0",
+      "deactivated": null,
+      "expired": null,
+      "facts_environment": "production",
+      "facts_timestamp": "2016-01-28T18:26:02.589Z",
+      "latest_report_hash": "2638652161207e7606d7d2461538d2dae883237b",
+      "latest_report_status": "failed",
+      "report_environment": "production",
+      "report_timestamp": "2016-01-28T18:13:02.405Z"
+   }
+  ]

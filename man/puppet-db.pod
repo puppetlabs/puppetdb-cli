@@ -1,0 +1,64 @@
+=head1 NAME
+
+puppet db - manages PuppetDB administrative tasks
+
+=head1 SYNOPSIS
+
+puppet-db [options] <action> [arguments]
+
+=head1 DESCRIPTION
+
+The C<puppet-db> tool allows you to perform PuppetDB administrative tasks such
+as exporting and anonymizing a backup of your PuppetDB or importing a backup to
+a PuppetDB. To learn more about the archive format and these administrative
+tasks in general, consult our documentation at:
+[http://docs.puppetlabs.com/puppetdb/master/migrate.html#exporting-data-from-an-existing-puppetdb-database]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h>,B<--help>
+
+Prints a list of the commands and a brief synopsis of each command. If
+an action is specified, it will print a description of that action and
+the options specific to that action.
+
+=item B<--version>
+
+Displays version information
+
+=back
+
+=head1 ACTIONS
+
+  $ puppet-db export [options]
+      The export action will export a PuppetDB archive from PuppetDB. The
+      default location of this archive will be './pdb-export.tgz' relative to
+      wherever the command was run from. You can specify a different location to
+      export to using the '--outfile <path>' option. Additionally you can
+      specify what level of anonymization you want for your archive using the
+      '--anonymization <str>' flag, for more information about PuppetDB archive
+      anonymization, consult the documentation at:
+      [http://docs.puppetlabs.com/puppetdb/master/anonymization.html]
+
+  $ puppet-db import [options]
+
+      The import action will import a PuppetDB archive to PuppetDB. You can
+      specify the location of the archive with the '--infile <path>' option.
+
+=head1 EXAMPLES
+
+    --------------------------------------------------------------------
+    Example #1 - Export a PuppetDB archive:
+
+    $ puppet-db export
+    Exporting PuppetDB...
+    Finished exporting PuppetDB archive to ./pdb-export.tgz.
+
+    --------------------------------------------------------------------
+    Example #2 - Import a PuppetDB archive:
+
+    $ puppet-db import --infile pdb-export.tgz
+    Importing pdb-export.tgz to PuppetDB...
+    Finished importing pdb-export.tgz to PuppetDB.
