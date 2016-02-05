@@ -16,6 +16,23 @@ endif()
 
 enable_testing()
 
+# pod2man setup
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+include("${PROJECT_SOURCE_DIR}/cmake/pod2man.cmake")
+file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/share/man")
+pod2man(
+  ${PROJECT_SOURCE_DIR}/man/puppet-db.pod
+  "puppet-db" 8 share/man
+  "manages PuppetDB administrative tasks"
+)
+
+pod2man(
+  ${PROJECT_SOURCE_DIR}/man/puppet-query.pod
+  "puppet-query" 8 share/man
+  "queries PuppetDB data"
+)
+
 # Leatherman setup
 include(FeatureSummary)
 SET(LEATHERMAN_COMPONENTS locale catch nowide logging util file_util rapidjson json_container)
