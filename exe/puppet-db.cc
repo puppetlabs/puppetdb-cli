@@ -83,7 +83,7 @@ main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("version")) {
-                nowide::cout << puppetdb_cli::version() << endl;
+                nowide::cout << puppetdb::version() << endl;
                 return EXIT_SUCCESS;
             }
 
@@ -132,15 +132,15 @@ main(int argc, char **argv) {
         logging::set_level(lvl);
 
         const auto subcommand = vm["subcommand"].as<string>();
-        const auto config = puppetdb_cli::parse_config();
+        const auto pdb_conn = puppetdb::get_puppetdb("");
         if (subcommand == "export") {
-            puppetdb_cli::pdb_export(config,
-                                     vm["outfile"].as<string>(),
-                                     vm["anonymization"].as<string>());
+            puppetdb::pdb_export(pdb_conn,
+                                 vm["outfile"].as<string>(),
+                                 vm["anonymization"].as<string>());
         } else if (subcommand == "import") {
-            puppetdb_cli::pdb_import(config,
-                                     vm["infile"].as<string>(),
-                                     vm["command-versions"].as<string>());
+            puppetdb::pdb_import(pdb_conn,
+                                 vm["infile"].as<string>(),
+                                 vm["command-versions"].as<string>());
         }
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);

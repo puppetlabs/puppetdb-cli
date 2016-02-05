@@ -1,7 +1,18 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <string>
+#include <tuple>
+#include <queue>
 
+#include <rapidjson/reader.h>
+#include <rapidjson/prettywriter.h>
+
+#define BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/lock_types.hpp>
+#include <boost/thread/condition_variable.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/filesystem.hpp>
@@ -13,7 +24,7 @@
 #include <puppetdb-cli/version.h>
 #include <puppetdb-cli/puppetdb-cli.hpp>
 
-namespace puppetdb_cli {
+namespace puppetdb {
 
 using namespace std;
 namespace fs = boost::filesystem;
@@ -29,33 +40,96 @@ version()
     return PUPPETDB_CLI_VERSION_WITH_COMMIT;
 }
 
-json::JsonContainer
-parse_config() {
-    const string pdbrc_path
+string
+read_config(const string& config_path) {
+    const string expanded_config_path
     { futil::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
-    const string default_config_str
-    { "{\"environments\":{\"dev\":{\"server_urls\":[\"http://127.0.0.1:8080\"]}}}" };
-    const json::JsonContainer default_config(default_config_str);
-    if (fs::exists(pdbrc_path)) {
-        const json::JsonContainer raw_config(futil::read(pdbrc_path));
-        const auto host = raw_config
-                .getWithDefault<string>("default_environment", "dev");
-        return raw_config
-                .getWithDefault<json::JsonContainer>({"environments", host},
-                                                     default_config);
+    return fs::exists(expanded_config_path) ?
+            futil::read(expanded_config_path) : "";
+}
+
+PuppetDBConn
+parse_config(const string& config_content) {
+    const json::JsonContainer raw_config(config_content);
+    const auto puppetdb_conn = raw_config.includes("puppetdb") ?
+            PuppetDBConn(raw_config.get<json::JsonContainer>("puppetdb")):
+            PuppetDBConn();
+    if (puppetdb_conn.getServerUrl().empty()) {
+        throw std::runtime_error { "invalid `server_urls` in configuration" };
+    }
+    return puppetdb_conn;
+}
+
+PuppetDBConn
+get_puppetdb(const string& config_path) {
+    return parse_config(read_config(config_path));
+}
+
+PuppetDBConn::PuppetDBConn() :
+        server_urls_ { { "http://127.0.0.1:8080" } },
+        cacert_ { "" },
+        cert_ { "" },
+        key_ { "" } {};
+
+
+PuppetDBConn::PuppetDBConn(const json::JsonContainer& config) :
+        server_urls_ { parseServerUrls(config) },
+        cacert_ { "" },
+        cert_ { "" },
+        key_ { "" } {
+            if (config.includes("cacert")) {
+                cacert_ = config.get<std::string>("cacert");
+            }
+            if (config.includes("cert")) {
+                cert_ = config.get<std::string>("cert");
+            }
+            if (config.includes("key")) {
+                key_ = config.get<std::string>("key");
+            }};
+
+string PuppetDBConn::getServerUrl() const {
+    return server_urls_.size() ? server_urls_[0] : "";
+}
+
+unique_ptr<CURL, function<void(CURL*)> >
+PuppetDBConn::getCurlHandle() const {
+    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
+                                                          curl_easy_cleanup);
+    if (cacert_ != "") curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert_.c_str());
+    if (cert_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
+    if (key_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
+    return curl;
+}
+
+server_urls_t
+PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
+    if (config.includes("server_urls")) {
+        const auto urls_type = config.type("server_urls");
+        if (urls_type == json::DataType::Array) {
+            return config.get<server_urls_t>("server_urls");
+        } else if (urls_type == json::DataType::String) {
+            return { config.get<string>("server_urls") };
+        } else {
+            return {};
+        }
     } else {
-        return default_config;
+        return {"http://127.0.0.1:8080"};
     }
 }
 
-string
-pdb_server_url(const json::JsonContainer& config) {
-    const auto server_urls = config.get< vector<string> >("server_urls");
-    return server_urls.size() ? server_urls[0] : "http://127.0.0.1:8080";
+typedef tuple< boost::mutex, boost::condition_variable, queue<int> > JsonQueue;
+size_t write_queue(char *ptr, size_t size, size_t nmemb, JsonQueue& stream) {
+    const size_t written = size * nmemb;
+    boost::unique_lock<boost::mutex> lk(get<0>(stream));
+    for (size_t i = 0; i < written; i++) {
+        get<2>(stream).push(ptr[i]);
+    }
+    lk.unlock();
+    get<1>(stream).notify_one();
+    return written;
 }
 
-size_t
-write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+size_t write_data(char *ptr, size_t size, size_t nmemb, FILE *stream) {
     const size_t written = fwrite(ptr, size, nmemb, stream);
     return written;
 }
@@ -64,40 +138,101 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
     return size * nmemb;
 }
 
-unique_ptr<CURL, function<void(CURL*)> >
-pdb_curl_handler(const json::JsonContainer& config) {
-    const auto cacert = config.getWithDefault<string>("cacert", "");
-    const auto cert = config.getWithDefault<string>("cert", "");
-    const auto key = config.getWithDefault<string>("key", "");
 
-    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
-                                                          curl_easy_cleanup);
+class JsonQueueWrapper {
+  public:
+    typedef char Ch;
+    JsonQueueWrapper(JsonQueue& stream) : stream_(stream) {}
+    Ch Peek() const { // 1
+        int c = Front();
+        return c == char_traits<char>::eof() ? '\0' : (Ch)c;
+    }
+    Ch Take() { // 2
+        int c = Get();
+        return c == char_traits<char>::eof() ? '\0' : (Ch)c;
+    }
+    size_t Tell() const { return (size_t)get<2>(stream_).size(); } // 3
+    Ch* PutBegin() { assert(false); return 0; }
+    void Put(Ch) { assert(false); }
+    void Flush() { assert(false); }
+    size_t PutEnd(Ch*) { assert(false); return 0; }
+  private:
+    int Front() const {
+        boost::unique_lock<boost::mutex> lk(get<0>(stream_));
+        get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
+        int c = get<2>(stream_).front();
+        lk.unlock();
+        return c;
+    };
+    int Get() {
+        boost::unique_lock<boost::mutex> lk(get<0>(stream_));
+        get<1>(stream_).wait(lk, [&]{ return !get<2>(stream_).empty(); });
+        int c = get<2>(stream_).front();
+        get<2>(stream_).pop();
+        lk.unlock();
+        return c;
+    };
+    JsonQueueWrapper(const JsonQueueWrapper&);
+    JsonQueueWrapper& operator=(const JsonQueueWrapper&);
+    JsonQueue& stream_;
+};
 
-    if (cacert != "") curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert.c_str());
-    if (cert != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert.c_str());
-    if (key != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key.c_str());
-    return curl;
-}
+class OStreamWrapper {
+  public:
+    typedef char Ch;
+    OStreamWrapper(std::ostream& os) : os_(os) {
+    }
+    Ch Peek() const { assert(false); return '\0'; }
+    Ch Take() { assert(false); return '\0'; }
+    size_t Tell() const { return 0; }
+    Ch* PutBegin() { assert(false); return 0; }
+    void Put(Ch c) { os_.put(c); }                  // 1
+    void Flush() { os_.flush(); }                   // 2
+    size_t PutEnd(Ch*) { assert(false); return 0; }
+  private:
+    OStreamWrapper(const OStreamWrapper&);
+    OStreamWrapper& operator=(const OStreamWrapper&);
+    std::ostream& os_;
+};
+
+void write_pretty(JsonQueue& stream) {
+    rapidjson::Reader reader;
+    JsonQueueWrapper is(stream);
+    OStreamWrapper os(nowide::cout);
+    rapidjson::PrettyWriter<OStreamWrapper> writer(os);
+    if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
+        nowide::cerr << "error parsing response" << endl;
+    }
+};
+
 
 void
-pdb_query(const json::JsonContainer& config,
-          const string& query) {
-    auto curl = pdb_curl_handler(config);
+pdb_query(const PuppetDBConn& conn,
+          const string& query_str) {
+    auto curl = conn.getCurlHandle();
 
     auto url_encoded_query = unique_ptr< char, function<void(char*)> >(
-        curl_easy_escape(curl.get(), query.c_str(), query.length()),
+        curl_easy_escape(curl.get(), query_str.c_str(), query_str.length()),
         curl_free);
 
-    const auto server_url = pdb_server_url(config) +
-            "/pdb/query/v4" +
-            "?query=" +
-            url_encoded_query.get();
+    const auto server_url = conn.getServerUrl()
+            + "/pdb/query/v4?query="
+            + url_encoded_query.get();
+
+    JsonQueue stream;
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, boost::ref(stream));
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);
+
+    boost::thread t1(write_pretty, boost::ref(stream));
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
+
+    get<2>(stream).push(char_traits<char>::eof());
+    get<1>(stream).notify_one();
+    t1.join();
+
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
     if (!(http_code == 200 && curl_code == CURLE_OK)) {
@@ -108,11 +243,11 @@ pdb_query(const json::JsonContainer& config,
 }
 
 void
-pdb_export(const json::JsonContainer& config,
+pdb_export(const PuppetDBConn& conn,
            const string& path,
            const string& anonymization) {
-    auto curl = pdb_curl_handler(config);
-    const string server_url = pdb_server_url(config)
+    auto curl = conn.getCurlHandle();
+    const string server_url = conn.getServerUrl()
             + "/pdb/admin/v1/archive?anonymization="
             + anonymization;
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
@@ -134,15 +269,15 @@ pdb_export(const json::JsonContainer& config,
     }
 }
 
-void pdb_import(const json::JsonContainer& config,
-                const string& infile,
-                const string& command_versions) {
-    auto curl = pdb_curl_handler(config);
+void
+pdb_import(const PuppetDBConn& conn,
+           const string& infile,
+           const string& command_versions) {
+    auto curl = conn.getCurlHandle();
+    const string server_url = conn.getServerUrl() + "/pdb/admin/v1/archive";
+
     curl_httppost* formpost = NULL;
     curl_httppost* lastptr = NULL;
-
-    const string server_url = pdb_server_url(config) + "/pdb/admin/v1/archive";
-
     curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "archive",
                  CURLFORM_FILE, infile.c_str(), CURLFORM_END);
     curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "command_versions",
@@ -169,4 +304,4 @@ void pdb_import(const json::JsonContainer& config,
     curl_formfree(formpost);
 }
 
-}  // puppetdb_cli
+}  // puppetdb
