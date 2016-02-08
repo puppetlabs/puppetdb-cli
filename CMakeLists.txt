@@ -36,7 +36,7 @@ pod2man(
 # Leatherman setup
 include(FeatureSummary)
 SET(LEATHERMAN_COMPONENTS locale catch nowide logging util file_util rapidjson json_container)
-find_package(Leatherman REQUIRED COMPONENTS ${LEATHERMAN_COMPONENTS})
+find_package(Leatherman 0.3.6 REQUIRED COMPONENTS ${LEATHERMAN_COMPONENTS})
 
 ## Before we find any packages, we want to pull in the common leatherman options, as they can affect commonly-used packages.
 include(options)
