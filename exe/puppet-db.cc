@@ -67,9 +67,7 @@ main(int argc, char **argv) {
         po::options_description import_subcommand_options("import subcommand options");
         import_subcommand_options.add_options()
                 ("infile", po::value<string>(),
-                 "the file to import into PuppetDB")
-                ("command-versions", po::value<string>(),
-                 "command versions to use for import");
+                 "the file to import into PuppetDB");
 
         po::variables_map vm;
 
@@ -138,9 +136,7 @@ main(int argc, char **argv) {
                                  vm["outfile"].as<string>(),
                                  vm["anonymization"].as<string>());
         } else if (subcommand == "import") {
-            puppetdb::pdb_import(pdb_conn,
-                                 vm["infile"].as<string>(),
-                                 vm["command-versions"].as<string>());
+            puppetdb::pdb_import(pdb_conn, vm["infile"].as<string>());
         }
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
