@@ -115,7 +115,7 @@ PuppetDBConn::PuppetDBConn() :
         server_urls_ { default_server_urls } ,
         cacert_ {},
         cert_ {},
-        key_ {} {};
+        key_ {};
 
 PuppetDBConn::PuppetDBConn(const string& urls,
                            const SSLCredentials& ssl_creds) :
@@ -336,13 +336,23 @@ void
 pdb_query(const PuppetDBConn& conn,
           const string& query_str) {
     auto curl = conn.getCurlHandle();
-    auto url_encoded_query = unique_ptr< char, function<void(char*)> >(
-        curl_easy_escape(curl.get(), query_str.c_str(), query_str.length()),
-        curl_free);
+    const auto server_url = conn.getServerUrl() + "/pdb/query/v4";
+    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
 
-    const auto server_url = conn.getServerUrl()
-            + "/pdb/query/v4?query="
-            + url_encoded_query.get();
+    // If this is PQL then we need to wrap the query in double-quotes, otherwise
+    // the query is AST and we leave it alone
+    string query_str_copy { query_str };
+    boost::trim(query_str_copy);
+    const string query = (query_str_copy[0] == '[') ? query_str:"\""+ query_str +"\"";
+    const string post_data = "{\"query\":" + query + "}";
+    curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
+
+    auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL,
+                                                                        curl_slist_free_all);
+    curl_easy_setopt(curl.get(),
+                     CURLOPT_HTTPHEADER,
+                     curl_slist_append(headers.get(), "Content-Type: application/json"));
+
 
     UserData userdata;
     userdata.collecting_header = true;
@@ -431,5 +441,4 @@ pdb_import(const PuppetDBConn& conn,
 
     curl_formfree(formpost);
 }
-
 }  // puppetdb
