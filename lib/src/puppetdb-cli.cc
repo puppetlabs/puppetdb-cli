@@ -2,6 +2,7 @@
 #include <curl/curl.h>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/filesystem.hpp>
@@ -64,18 +65,9 @@ PuppetDBConn::PuppetDBConn() :
 
 PuppetDBConn::PuppetDBConn(const json::JsonContainer& config) :
         server_urls_ { parseServerUrls(config) },
-        cacert_ { "" },
-        cert_ { "" },
-        key_ { "" } {
-            if (config.includes("cacert")) {
-                cacert_ = config.get<std::string>("cacert");
-            }
-            if (config.includes("cert")) {
-                cert_ = config.get<std::string>("cert");
-            }
-            if (config.includes("key")) {
-                key_ = config.get<std::string>("key");
-            }};
+        cacert_ { config.getWithDefault<std::string>("cacert", "") },
+        cert_ { config.getWithDefault<std::string>("cert", "") },
+        key_ { config.getWithDefault<std::string>("key", "") } {};
 
 string PuppetDBConn::getServerUrl() const {
     return server_urls_.size() ? server_urls_[0] : "";
@@ -120,25 +112,42 @@ void
 pdb_query(const PuppetDBConn& conn,
           const string& query_str) {
     auto curl = conn.getCurlHandle();
-    auto url_encoded_query = unique_ptr< char, function<void(char*)> >(
-        curl_easy_escape(curl.get(), query_str.c_str(), query_str.length()),
-        curl_free);
-
-    const auto server_url = conn.getServerUrl()
-            + "/pdb/query/v4?query="
-            + url_encoded_query.get();
-
+    const auto server_url = conn.getServerUrl() + "/pdb/query/v4";
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+
+    // If this is PQL then we need to wrap the query in double-quotes, otherwise
+    // the query is AST and we leave it alone
+    string query_str_copy { query_str };
+    boost::trim(query_str_copy);
+    const string query = (query_str_copy[0] == '[') ? query_str:"\""+ query_str +"\"";
+    const string post_data = "{\"query\":" + query + "}";
+    curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
+
+    auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL,
+                                                                        curl_slist_free_all);
+    curl_easy_setopt(curl.get(),
+                     CURLOPT_HTTPHEADER,
+                     curl_slist_append(headers.get(), "Content-Type: application/json"));
+
+
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
-    long http_code = 0;
-    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
-    if (!(http_code == 200 && curl_code == CURLE_OK)) {
+    if (curl_code != CURLE_OK) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
-        nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
+        nowide::cerr << "error connecting to PuppetDB: "
+                     << curl_easy_strerror(curl_code) << endl;
         logging::colorize(nowide::cerr);
+    } else {
+        nowide::cout << endl;
+        long http_code = 0;
+        curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+        if (http_code != 200) {
+            logging::colorize(nowide::cerr, logging::log_level::fatal);
+            nowide::cerr << "error status " << http_code << " contacting PuppetDB" << endl;
+            logging::colorize(nowide::cerr);
+        }
     }
 }
 
@@ -203,5 +212,4 @@ pdb_import(const PuppetDBConn& conn,
 
     curl_formfree(formpost);
 }
-
 }  // puppetdb
