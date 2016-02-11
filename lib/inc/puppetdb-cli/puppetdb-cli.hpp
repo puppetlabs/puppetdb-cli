@@ -104,12 +104,8 @@ LIBPUPPETDB_EXPORT void pdb_export(const PuppetDBConn& conn,
  * Upload a PuppetDB archive to an instance of PuppetDB.
  * @param config JsonContainer of the CLI configuration.
  * @param infile string path to archive file for upload.
- * @param command_versions string json object containing PuppetDB command
- * versions to use on import.
- * Example: '{"replace_facts":4,"store_report":6,"replace_catalog":7}'
 */
 LIBPUPPETDB_EXPORT void pdb_import(const PuppetDBConn& conn,
-                                   const std::string& infile,
-                                   const std::string& command_versions);
+                                   const std::string& infile);
 
 }  // namespace puppetdb

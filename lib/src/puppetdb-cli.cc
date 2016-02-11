@@ -171,8 +171,7 @@ pdb_export(const PuppetDBConn& conn,
 
 void
 pdb_import(const PuppetDBConn& conn,
-           const string& infile,
-           const string& command_versions) {
+           const string& infile) {
     auto curl = conn.getCurlHandle();
     const string server_url = conn.getServerUrl() + "/pdb/admin/v1/archive";
 
@@ -180,8 +179,6 @@ pdb_import(const PuppetDBConn& conn,
     curl_httppost* lastptr = NULL;
     curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "archive",
                  CURLFORM_FILE, infile.c_str(), CURLFORM_END);
-    curl_formadd(&formpost, &lastptr, CURLFORM_COPYNAME, "command_versions",
-                 CURLFORM_COPYCONTENTS, command_versions.c_str(), CURLFORM_END);
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTPPOST, formpost);
