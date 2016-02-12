@@ -31,18 +31,25 @@ version()
 
 string
 read_config(const string& config_path) {
+    const string defaulted_config_path = config_path.empty() ?
+            "~/.puppetlabs/client-tools/puppetdb.conf" : config_path;
     const string expanded_config_path
-    { futil::tilde_expand("~/.puppetlabs/client-tools/puppetdb.conf") };
+    { futil::tilde_expand(defaulted_config_path) };
     return fs::exists(expanded_config_path) ?
             futil::read(expanded_config_path) : "";
 }
 
 PuppetDBConn
-parse_config(const string& config_content) {
+parse_config(const string& config_content,
+             const string& urls,
+             const string& cacert,
+             const string& cert,
+             const string& key) {
     const json::JsonContainer raw_config(config_content);
     const auto puppetdb_conn = raw_config.includes("puppetdb") ?
-            PuppetDBConn(raw_config.get<json::JsonContainer>("puppetdb")):
-            PuppetDBConn();
+            PuppetDBConn(raw_config.get<json::JsonContainer>("puppetdb"),
+                         urls, cacert, cert, key):
+            PuppetDBConn(urls, cacert, cert, key);
     if (puppetdb_conn.getServerUrl().empty()) {
         throw std::runtime_error { "invalid `server_urls` in configuration" };
     }
@@ -50,30 +57,51 @@ parse_config(const string& config_content) {
 }
 
 PuppetDBConn
-get_puppetdb(const string& config_path) {
+get_puppetdb(const string& config_path,
+             const string& urls,
+             const string& cacert,
+             const string& cert,
+             const string& key) {
     const auto config_content = read_config(config_path);
-    return config_content.empty() ? PuppetDBConn() : parse_config(config_content);
+    return config_content.empty() ? PuppetDBConn(urls, cacert, cert, key)
+            : parse_config(config_content, urls, cacert, cert, key);
 }
 
 PuppetDBConn::PuppetDBConn() :
-        server_urls_ { { "http://127.0.0.1:8080" } },
-        cacert_ { "" },
-        cert_ { "" },
-        key_ { "" } {};
+        server_urls_ { { "http://127.0.0.1:8080" } } ,
+        cacert_ {},
+        cert_ {},
+        key_ {} {};
 
+PuppetDBConn::PuppetDBConn(const string& urls,
+                           const string& cacert,
+                           const string& cert,
+                           const string& key) :
+        server_urls_ { urls.empty() ?
+            vector<string>({ "http://127.0.0.1:8080" }) :
+            vector<string>({ urls })},
+        cacert_ { cacert },
+        cert_ { cert },
+        key_ { key } {};
 
-PuppetDBConn::PuppetDBConn(const json::JsonContainer& config) :
-        server_urls_ { parseServerUrls(config) },
-        cacert_ { "" },
-        cert_ { "" },
-        key_ { "" } {
-            if (config.includes("cacert")) {
+PuppetDBConn::PuppetDBConn(const json::JsonContainer& config,
+                           const string& urls,
+                           const string& cacert,
+                           const string& cert,
+                           const string& key) :
+        server_urls_ { urls.empty() ?
+            parseServerUrls(config) :
+            vector<string>({ urls }) },
+        cacert_ { cacert },
+        cert_ { cert },
+        key_ { key } {
+            if (cacert.empty() && config.includes("cacert")) {
                 cacert_ = config.get<std::string>("cacert");
             }
-            if (config.includes("cert")) {
+            if (cert.empty() && config.includes("cert")) {
                 cert_ = config.get<std::string>("cert");
             }
-            if (config.includes("key")) {
+            if (key.empty() && config.includes("key")) {
                 key_ = config.get<std::string>("key");
             }};
 

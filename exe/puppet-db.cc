@@ -41,6 +41,16 @@ main(int argc, char **argv) {
         po::options_description global_options("global options");
         global_options.add_options()
                 ("help,h", "produce help message")
+                ("config", po::value<string>()->default_value(""),
+                 "path to use for CLI configuration")
+                ("urls", po::value<string>()->default_value(""),
+                 "urls to use for PuppetDB")
+                ("cacert", po::value<string>()->default_value(""),
+                 "cacert to use for curl")
+                ("cert", po::value<string>()->default_value(""),
+                 "client cert to use for curl")
+                ("key", po::value<string>()->default_value(""),
+                 "client private key to use for curl")
                 ("log-level,l",
                  po::value<logging::log_level>()->default_value(logging::log_level::warning,
                                                                 "warn"),
@@ -152,7 +162,13 @@ main(int argc, char **argv) {
         logging::set_level(lvl);
 
         const auto subcommand = vm["subcommand"].as<string>();
-        const auto pdb_conn = puppetdb::get_puppetdb("");
+        const auto pdb_conn = puppetdb::get_puppetdb(
+            vm["config"].as<string>(),
+            vm["urls"].as<string>(),
+            vm["cacert"].as<string>(),
+            vm["cert"].as<string>(),
+            vm["key"].as<string>());
+
         if (subcommand == "export") {
             puppetdb::pdb_export(pdb_conn,
                                  vm["outfile"].as<string>(),
