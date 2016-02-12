@@ -177,38 +177,36 @@ PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
 
 class SynchronizedCharQueue {
   public:
-    char front() {
+    vector<char> front() {
         boost::unique_lock<boost::mutex> mlock(mutex_);
         cond_.wait(mlock, [&]{ return !queue_.empty(); });
         return queue_.front();
     }
 
-    char pop() {
+    vector<char> pop() {
         boost::unique_lock<boost::mutex> mlock(mutex_);
-        cond_.wait(mlock,  [&]{ return !queue_.empty(); });
+        cond_.wait(mlock, [&]{ return !queue_.empty(); });
         auto item = queue_.front();
         queue_.pop();
         return item;
     }
 
-    void push_range(vector<char>& items) {
+    void push(vector<char>&& items) {
         boost::unique_lock<boost::mutex> mlock(mutex_);
-        for (auto item : items) queue_.push(item);
+        queue_.push(items);
         mlock.unlock();
         cond_.notify_one();
     }
 
-    void push(char item) {
+    void push(const char& item) {
         boost::unique_lock<boost::mutex> mlock(mutex_);
-        queue_.push(item);
+        queue_.push({item});
         mlock.unlock();
         cond_.notify_one();
     }
-
-    int size() { return queue_.size(); }
 
   private:
-    queue<char> queue_;
+    queue< vector<char> > queue_;
     boost::mutex mutex_;
     boost::condition_variable cond_;
 };
@@ -248,8 +246,7 @@ size_t write_queue(char *ptr, size_t size, size_t nmemb, UserData& userdata) {
             }
         }
     } else {
-        vector<char> buffer(ptr, ptr + written);
-        userdata.stream.push_range(buffer);
+        userdata.stream.push(vector<char>(ptr, ptr + written));
     }
     return written;
 }
@@ -269,7 +266,10 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
 class SynchronizedCharQueueWrapper {
   public:
     typedef char Ch;
-    SynchronizedCharQueueWrapper(SynchronizedCharQueue& stream) : stream_(stream) {}
+    SynchronizedCharQueueWrapper(SynchronizedCharQueue& stream) : stream_(stream),
+                                                                  count_(0),
+                                                                  buffer_(stream_.pop()),
+                                                                  buffer_iterator_(buffer_.begin()) {}
     char Peek() const {
         int c = Front();
         return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
@@ -278,17 +278,30 @@ class SynchronizedCharQueueWrapper {
         int c = Get();
         return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
     }
-    size_t Tell() const { return (size_t)stream_.size(); }
+    size_t Tell() const { return count_; }
     char* PutBegin() { assert(false); return 0; }
     void Put(char c) { assert(false); }
     void Flush() { assert(false); }
     size_t PutEnd(char* c) { assert(false); return 0; }
+
   private:
-    int Front() const { return stream_.front(); }
-    int Get() { return stream_.pop(); }
+    int Front() const { return *buffer_iterator_; }
+    int Get() {
+        int c = *buffer_iterator_;
+        count_++;
+        ++buffer_iterator_;
+        if (buffer_iterator_ == buffer_.end()) {
+            buffer_ = stream_.pop();
+            buffer_iterator_ = buffer_.begin();
+        }
+        return c;
+    }
     SynchronizedCharQueueWrapper(const SynchronizedCharQueueWrapper&);
     SynchronizedCharQueueWrapper& operator=(const SynchronizedCharQueueWrapper&);
     SynchronizedCharQueue& stream_;
+    size_t count_;
+    vector<char> buffer_;
+    vector<char>::iterator buffer_iterator_;
 };
 
 void write_pretty(UserData& userdata) {
@@ -306,10 +319,15 @@ void write_pretty(UserData& userdata) {
             nowide::cerr << "error parsing response" << endl;
         }
     } else {
-        int c = userdata.stream.pop();
-        while ( c != char_traits<char>::eof() ) {
-            userdata.error_response += c;
-            c = userdata.stream.pop();
+        vector<char> buffer = userdata.stream.pop();
+        while (buffer.empty()) buffer = userdata.stream.pop();
+
+        // We always signal the end with a vector of `{ '\0' }`
+        while ( static_cast<int>(buffer[0]) != char_traits<char>::eof() ) {
+            userdata.error_response.append(buffer.begin(), buffer.end());
+            do {
+                buffer = userdata.stream.pop();
+            } while (buffer.empty());
         }
     }
 }
@@ -335,13 +353,22 @@ pdb_query(const PuppetDBConn& conn,
 
     boost::thread t1(write_pretty, boost::ref(userdata));
     const CURLcode curl_code = curl_easy_perform(curl.get());
+    if (curl_code != CURLE_OK) {
+        logging::colorize(nowide::cerr, logging::log_level::fatal);
+        nowide::cerr << "error connecting to PuppetDB: "
+                     << curl_easy_strerror(curl_code) << endl;
+        logging::colorize(nowide::cerr);
+        return;
+    }
+
     userdata.stream.push(char_traits<char>::eof());
     t1.join();
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
-    if (!(http_code == 200 && curl_code == CURLE_OK)) {
+    if (http_code != 200) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
-        nowide::cerr << "error: " << userdata.error_response << endl;
+        nowide::cerr << "error status " << http_code << " querying PuppetDB:" << endl;
+        nowide::cerr << userdata.error_response << endl;
         logging::colorize(nowide::cerr);
     }
 }
