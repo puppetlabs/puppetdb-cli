@@ -76,9 +76,6 @@ add_cppcheck_dirs("${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/exe")
 enable_cppcheck()
 
 
-# We duplicate the `help_test` as `smoke_test` until the default functionality
-# of the tool has been nailed down.
-add_test(NAME "db_smoke_test" COMMAND puppet-db)
 add_test(NAME "db_help_test" COMMAND puppet-db --help)
 add_test(NAME "query_help_test" COMMAND puppet-query --help)
 

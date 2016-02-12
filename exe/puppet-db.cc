@@ -19,13 +19,14 @@ namespace logging = leatherman::logging;
 void
 help(po::options_description& global_desc,
      po::options_description& export_subcommand_desc,
-     po::options_description& import_subcommand_desc)
+     po::options_description& import_subcommand_desc,
+     ostream& os)
 {
-    nowide::cout << "usage: puppet-db [global] export [options]\n"
-                 << "       puppet-db [global] import [options]\n"
-                 << global_desc << "\n"
-                 << export_subcommand_desc << "\n"
-                 << import_subcommand_desc << endl;
+    os << "usage: puppet-db [global] export [options]\n"
+       << "       puppet-db [global] import [options]\n"
+       << global_desc << "\n"
+       << export_subcommand_desc << "\n"
+       << import_subcommand_desc << endl;
 }
 
 int
@@ -49,7 +50,7 @@ main(int argc, char **argv) {
 
         po::options_description command_line_options("");
         command_line_options.add(global_options).add_options()
-                ("subcommand", po::value<string>(),
+                ("subcommand", po::value<string>()->default_value(""),
                  "subcommand to execute")
                 ("subargs", po::value< vector<string> >(),
                  "arguments for subcommand");
@@ -64,10 +65,15 @@ main(int argc, char **argv) {
                 ("anonymization", po::value<string>()->default_value("none"),
                  "anonymization for the PuppetDB archive");
 
+        po::positional_options_description export_positional_options;
+        export_positional_options.add("outfile", 1);
+
         po::options_description import_subcommand_options("import subcommand options");
         import_subcommand_options.add_options()
-                ("infile", po::value<string>(),
-                 "the file to import into PuppetDB");
+                ("infile", po::value<string>(), "the file to import into PuppetDB");
+
+        po::positional_options_description import_positional_options;
+        import_positional_options.add("infile", 1);
 
         po::variables_map vm;
 
@@ -85,33 +91,48 @@ main(int argc, char **argv) {
                 return EXIT_SUCCESS;
             }
 
-            if (vm.count("help") || vm["subcommand"].empty()) {
+            if (vm.count("help")) {
                 help(global_options,
                      export_subcommand_options,
-                     import_subcommand_options);
+                     import_subcommand_options,
+                     nowide::cout);
                 return EXIT_SUCCESS;
             }
 
             const auto subcommand = vm["subcommand"].as<string>();
-            if (((subcommand != "export") && (subcommand != "import"))
-                || ((subcommand == "import") && vm["subargs"].empty())) {
-                help(global_options,
-                     export_subcommand_options,
-                     import_subcommand_options);
-                return EXIT_FAILURE;
-            }
-
-            // Collect all the unrecognized options from the first pass. This will include the
-            // (positional) command name, so we need to erase that.
-            vector<string> opts = po::collect_unrecognized(parsed.options,
-                                                           po::include_positional);
-            opts.erase(opts.begin());
             if (subcommand == "export") {
-                po::store(po::command_line_parser(opts).options(export_subcommand_options)
+                // Collect all the unrecognized options from the first pass.
+                // This will include the (positional) command name, so we need
+                // to erase that.
+                vector<string> opts = po::collect_unrecognized(parsed.options,
+                                                               po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts)
+                          .options(export_subcommand_options)
+                          .positional(export_positional_options)
                           .run(), vm);
             } else if (subcommand == "import") {
-                po::store(po::command_line_parser(opts).options(import_subcommand_options)
+                if (vm["subargs"].empty()) {
+                    help(global_options,
+                         export_subcommand_options,
+                         import_subcommand_options,
+                         nowide::cerr);
+                    return EXIT_FAILURE;
+                }
+
+                vector<string> opts = po::collect_unrecognized(parsed.options,
+                                                               po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts)
+                          .options(import_subcommand_options)
+                          .positional(import_positional_options)
                           .run(), vm);
+            } else {
+                help(global_options,
+                     export_subcommand_options,
+                     import_subcommand_options,
+                     nowide::cerr);
+                return EXIT_FAILURE;
             }
 
             po::notify(vm);
@@ -121,7 +142,8 @@ main(int argc, char **argv) {
             logging::colorize(nowide::cerr);
             help(global_options,
                  export_subcommand_options,
-                 import_subcommand_options);
+                 import_subcommand_options,
+                 nowide::cerr);
             return EXIT_FAILURE;
         }
 

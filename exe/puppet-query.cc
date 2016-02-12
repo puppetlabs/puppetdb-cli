@@ -17,10 +17,10 @@ namespace po = boost::program_options;
 namespace logging = leatherman::logging;
 
 void
-help(po::options_description& global_desc)
+help(po::options_description& global_desc, ostream& os)
 {
-    nowide::cout << "usage: puppet-query [global] query <query>\n\n"
-                 << global_desc << endl;
+    os << "usage: puppet-query [global] query <query>\n\n"
+       << global_desc << endl;
 }
 
 int
@@ -60,7 +60,7 @@ main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("help")) {
-                help(global_options);
+                help(global_options, nowide::cout);
                 return EXIT_SUCCESS;
             }
 
@@ -74,7 +74,7 @@ main(int argc, char **argv) {
             logging::colorize(nowide::cerr, logging::log_level::error);
             nowide::cerr << "error: " << ex.what() << "\n" << endl;
             logging::colorize(nowide::cerr);
-            help(global_options);
+            help(global_options, nowide::cerr);
             return EXIT_FAILURE;
         }
 
