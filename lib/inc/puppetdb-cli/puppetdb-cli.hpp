@@ -109,6 +109,7 @@ LIBPUPPETDB_EXPORT PuppetDBConn get_puppetdb(const std::string& config_path,
  * @return This function does not return anything.
  */
 LIBPUPPETDB_EXPORT void pdb_query(const PuppetDBConn& conn,
+                                  const std::string& endpoint,
                                   const std::string& query);
 
 /**
