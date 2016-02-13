@@ -90,9 +90,9 @@ unique_ptr<CURL, function<void(CURL*)> >
 PuppetDBConn::getCurlHandle() const {
     auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
                                                           curl_easy_cleanup);
-    if (cacert_ != "") curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert_.c_str());
-    if (cert_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
-    if (key_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
+    if (!cacert_.empty()) curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert_.c_str());
+    if (!cert_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
+    if (!key_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
     return curl;
 }
 
@@ -256,8 +256,10 @@ void write_pretty(UserData& userdata) {
             nowide::cerr << "error parsing response" << endl;
         }
     } else {
-        vector<char> buffer = userdata.stream.pop();
-        while (buffer.empty()) buffer = userdata.stream.pop();
+        vector<char> buffer;
+        do {
+            buffer = userdata.stream.pop();
+        } while (buffer.empty());
 
         // We always signal the end with a vector of `{ '\0' }`
         while ( static_cast<int>(buffer[0]) != char_traits<char>::eof() ) {
@@ -269,19 +271,25 @@ void write_pretty(UserData& userdata) {
     }
 }
 
-void
-pdb_query(const PuppetDBConn& conn,
-          const string& query_str) {
-    auto curl = conn.getCurlHandle();
-    const auto server_url = conn.getServerUrl() + "/pdb/query/v4";
-    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-
+string
+convert_query_to_post_data(const string& query_str) {
     // If this is PQL then we need to wrap the query in double-quotes, otherwise
     // the query is AST and we leave it alone
     string query_str_copy { query_str };
     boost::trim(query_str_copy);
     const string query = (query_str_copy[0] == '[') ? query_str:"\""+ query_str +"\"";
-    const string post_data = "{\"query\":" + query + "}";
+    return "{\"query\":" + query + "}";
+}
+
+void
+pdb_query(const PuppetDBConn& conn,
+          const string& endpoint,
+          const string& query_str) {
+    auto curl = conn.getCurlHandle();
+    const string server_url = conn.getServerUrl() + endpoint;
+    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+
+    const string post_data = convert_query_to_post_data(query_str);
     curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
 
     auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL,
@@ -289,7 +297,6 @@ pdb_query(const PuppetDBConn& conn,
     curl_easy_setopt(curl.get(),
                      CURLOPT_HTTPHEADER,
                      curl_slist_append(headers.get(), "Content-Type: application/json"));
-
 
     UserData userdata;
     userdata.collecting_header = true;
@@ -362,18 +369,26 @@ pdb_import(const PuppetDBConn& conn,
     curl_easy_setopt(curl.get(), CURLOPT_HTTPPOST, formpost);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_body);
 
-    boost::nowide::cout << "Importing " << infile << " to PuppetDB..." << endl;
+    nowide::cout << "Importing " << infile << " to PuppetDB..." << endl;
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
-    long http_code = 0;
-    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+    if (curl_code != CURLE_OK) {
+        logging::colorize(nowide::cerr, logging::log_level::fatal);
+        nowide::cerr << "error connecting to PuppetDB: "
+                     << curl_easy_strerror(curl_code) << endl;
+        logging::colorize(nowide::cerr);
 
-    if (http_code == 200 && curl_code == CURLE_OK) {
-      nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
     } else {
-      logging::colorize(nowide::cerr, logging::log_level::fatal);
-      nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
-      logging::colorize(nowide::cerr);
+        long http_code = 0;
+        curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+        if (http_code == 200) {
+            nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
+        } else {
+            logging::colorize(nowide::cerr, logging::log_level::fatal);
+            nowide::cerr << "error status " << http_code
+                         << " importing archive to PuppetDB" << endl;
+            logging::colorize(nowide::cerr);
+        }
     }
 
     curl_formfree(formpost);

@@ -84,7 +84,7 @@ main(int argc, char **argv) {
 
         const auto pdb_conn = puppetdb::get_puppetdb("");
         const auto query = vm["query"].as<string>();
-        puppetdb::pdb_query(pdb_conn, query);
+        puppetdb::pdb_query(pdb_conn, "/pdb/query/v4", query);
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "unhandled exception: " << ex.what() << "\n" << endl;
