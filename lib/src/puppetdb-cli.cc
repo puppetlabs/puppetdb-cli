@@ -7,6 +7,8 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/filewritestream.h>
 
+#include <yaml-cpp/yaml.h>
+
 
 #define BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
 #include <boost/thread.hpp>
@@ -153,6 +155,7 @@ struct UserData {
     vector<string> headers;
     string content_type;
     string error_response;
+    bool is_tabular;
     SynchronizedCharQueue stream;
 };
 
@@ -241,6 +244,32 @@ class SynchronizedCharQueueWrapper {
     vector<char>::iterator buffer_iterator_;
 };
 
+class YamlWriter {
+  public:
+    YamlWriter(ostream& os) : out_(os) {}
+
+    bool Null() { out_ << YAML::Node(); return true; }
+    bool Bool(bool b) { out_ << b; return true; }
+    bool Int(int i) { out_ << i; return true; }
+    bool Uint(unsigned u) { out_ << u; return true; }
+    bool Int64(int64_t i) { out_ << i; return true; }
+    bool Uint64(uint64_t u) { out_ << u; return true; }
+    bool Double(double d) { out_ << d; return true; }
+    bool String(const char* str, rapidjson::SizeType length, bool) { out_ << str; return true; }
+    bool StartObject() { out_ << YAML::BeginMap;; return true; }
+    bool Key(const char* str, rapidjson::SizeType length, bool copy) { out_ << str; return true; }
+    bool EndObject(rapidjson::SizeType memberCount) { out_ << YAML::EndMap; return true; }
+    bool StartArray() { out_ << YAML::BeginSeq; return true; }
+    bool EndArray(rapidjson::SizeType elementCount) { out_ << YAML::EndSeq; return true; }
+
+    YAML::Emitter out_;
+
+  private:
+    YamlWriter(const YamlWriter&);
+    YamlWriter& operator=(const YamlWriter&);
+};
+
+
 void write_pretty(UserData& userdata) {
     // This will make sure to block until we have parsed the header
     userdata.stream.front();
@@ -249,11 +278,18 @@ void write_pretty(UserData& userdata) {
     if (content_type.starts_with("application/json")) {
         rapidjson::Reader reader;
         SynchronizedCharQueueWrapper is(userdata.stream);
-        char writeBuffer[65536];
-        rapidjson::FileWriteStream os(stdout, writeBuffer, sizeof(writeBuffer));
-        rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
-        if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
-            nowide::cerr << "error parsing response" << endl;
+        if (userdata.is_tabular) {
+            char writeBuffer[65536];
+            rapidjson::FileWriteStream os(stdout, writeBuffer, sizeof(writeBuffer));
+            rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
+            if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
+                nowide::cerr << "error parsing response" << endl;
+            }
+        } else {
+            YamlWriter writer(nowide::cout);
+            if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
+                nowide::cerr << "error parsing response" << endl;
+            }
         }
     } else {
         vector<char> buffer;
@@ -283,6 +319,7 @@ convert_query_to_post_data(const string& query_str) {
 
 void
 pdb_query(const PuppetDBConn& conn,
+          const bool& is_tabular,
           const string& endpoint,
           const string& query_str) {
     auto curl = conn.getCurlHandle();
@@ -300,6 +337,7 @@ pdb_query(const PuppetDBConn& conn,
 
     UserData userdata;
     userdata.collecting_header = true;
+    userdata.is_tabular = is_tabular;
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &userdata);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);

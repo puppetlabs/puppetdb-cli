@@ -48,6 +48,8 @@ add_definitions(${LEATHERMAN_DEFINITIONS})
 include(leatherman)
 
 # Add other dependencies
+option(YAMLCPP_STATIC "Use yaml-cpp's static libraries" OFF)
+find_package(YAMLCPP REQUIRED)
 find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
 find_package(CURL REQUIRED)
 
