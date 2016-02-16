@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <string>
+#include <sstream>
+#include <vector>
 
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
@@ -56,6 +58,40 @@ parse_config(const string& config_content,
     return puppetdb_conn;
 }
 
+vector<string> split(string str, char delimiter) {
+    vector<string> internal;
+    stringstream ss(str);
+    string tok;
+
+    while (getline(ss, tok, delimiter)) {
+        internal.push_back(tok);
+    }
+
+    return internal;
+}
+
+server_urls_t
+parse_server_urls_str(const string& urls) {
+    return split(urls, ',');
+}
+
+
+server_urls_t
+parse_server_urls(const json::JsonContainer& config) {
+    if (config.includes("server_urls")) {
+        const auto urls_type = config.type("server_urls");
+        if (urls_type == json::DataType::Array) {
+            return config.get<server_urls_t>("server_urls");
+        } else if (urls_type == json::DataType::String) {
+            return parse_server_urls_str(config.get<string>("server_urls"));
+        } else {
+            return {};
+        }
+    } else {
+        return {"http://127.0.0.1:8080"};
+    }
+}
+
 PuppetDBConn
 get_puppetdb(const string& config_path,
              const string& urls,
@@ -79,7 +115,7 @@ PuppetDBConn::PuppetDBConn(const string& urls,
                            const string& key) :
         server_urls_ { urls.empty() ?
             vector<string>({ "http://127.0.0.1:8080" }) :
-            vector<string>({ urls })},
+            parse_server_urls_str(urls)},
         cacert_ { cacert },
         cert_ { cert },
         key_ { key } {};
@@ -90,8 +126,8 @@ PuppetDBConn::PuppetDBConn(const json::JsonContainer& config,
                            const string& cert,
                            const string& key) :
         server_urls_ { urls.empty() ?
-            parseServerUrls(config) :
-            vector<string>({ urls }) },
+            parse_server_urls(config) :
+            parse_server_urls_str(urls)},
         cacert_ { cacert },
         cert_ { cert },
         key_ { key } {
@@ -117,22 +153,6 @@ PuppetDBConn::getCurlHandle() const {
     if (cert_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
     if (key_ != "") curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
     return curl;
-}
-
-server_urls_t
-PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
-    if (config.includes("server_urls")) {
-        const auto urls_type = config.type("server_urls");
-        if (urls_type == json::DataType::Array) {
-            return config.get<server_urls_t>("server_urls");
-        } else if (urls_type == json::DataType::String) {
-            return { config.get<string>("server_urls") };
-        } else {
-            return {};
-        }
-    } else {
-        return {"http://127.0.0.1:8080"};
-    }
 }
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {

@@ -69,12 +69,6 @@ class LIBPUPPETDB_EXPORT PuppetDBConn  {
 
 
   private:
-    /**
-     * Parse the config for server_urls
-     * @param JsonContainer of your PuppetDB CLI configuration
-     * @return a list of server_urls
-     */
-    server_urls_t parseServerUrls(const leatherman::json_container::JsonContainer& config);
     /// List of PuppetDB server_urls
     server_urls_t server_urls_;
     /// The cacert for SSL connections
