@@ -83,10 +83,13 @@ LIBPUPPETDB_EXPORT PuppetDBConn get_puppetdb(const std::string& config_path);
 /**
  * Query a PuppetDB endpoint for a given config.
  * @param config JsonContainer of the cli configuration.
+ * @param endpoint string of the endpoint with which to POST the query.
  * @param query string of the query for PuppetDB (can be either AST or PQL syntax).
  * @return This function does not return anything.
  */
 LIBPUPPETDB_EXPORT void pdb_query(const PuppetDBConn& conn,
+                                  const bool& is_tabular,
+                                  const std::string& endpoint,
                                   const std::string& query);
 
 /**

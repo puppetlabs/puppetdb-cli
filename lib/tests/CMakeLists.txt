@@ -4,6 +4,7 @@
 include_directories(
   ../inc
   ${CURL_INCLUDE_DIRS}
+  ${YAMLCPP_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${LEATHERMAN_CATCH_INCLUDE}
 )
@@ -14,6 +15,7 @@ add_executable(libpuppetdb_test $<TARGET_OBJECTS:libprojectsrc> ${TEST_CASES} ma
 target_link_libraries(libpuppetdb_test
     ${Boost_LIBRARIES}
     ${LEATHERMAN_LIBRARIES}
+    ${YAMLCPP_LIBRARIES}
     ${CURL_LIBRARIES}
 )
 

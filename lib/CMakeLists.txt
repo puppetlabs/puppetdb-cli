@@ -20,6 +20,7 @@ leatherman_logging_namespace("puppetlabs.puppetdb")
 include_directories(
   inc
   ${CURL_INCLUDE_DIRS}
+  ${YAMLCPP_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${LEATHERMAN_INCLUDE_DIRS}
 )
@@ -36,6 +37,7 @@ set_target_properties(libpuppetdb PROPERTIES VERSION "${PROJECT_VERSION_MAJOR}.$
 target_link_libraries(libpuppetdb
     ${Boost_LIBRARIES}
     ${LEATHERMAN_LIBRARIES}
+    ${YAMLCPP_LIBRARIES}
     ${CURL_LIBRARIES}
 )
 

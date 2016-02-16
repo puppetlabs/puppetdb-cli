@@ -35,6 +35,7 @@ main(int argc, char **argv) {
         po::options_description global_options("global options");
         global_options.add_options()
                 ("help,h", "produce help message")
+                ("json", "use JSON output")
                 ("log-level,l",
                  po::value<logging::log_level>()->default_value(logging::log_level::warning,
                                                                 "warn"),
@@ -84,7 +85,7 @@ main(int argc, char **argv) {
 
         const auto pdb_conn = puppetdb::get_puppetdb("");
         const auto query = vm["query"].as<string>();
-        puppetdb::pdb_query(pdb_conn, query);
+        puppetdb::pdb_query(pdb_conn, vm.count("json"), "/pdb/query/v4", query);
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "unhandled exception: " << ex.what() << "\n" << endl;
