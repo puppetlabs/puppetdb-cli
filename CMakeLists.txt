@@ -16,10 +16,22 @@ endif()
 
 enable_testing()
 
-# pod2man setup
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+# Leatherman setup
+include(FeatureSummary)
+SET(LEATHERMAN_COMPONENTS locale catch nowide logging util file_util rapidjson json_container)
+find_package(Leatherman 0.3.7 REQUIRED COMPONENTS ${LEATHERMAN_COMPONENTS})
 
-include("${PROJECT_SOURCE_DIR}/cmake/pod2man.cmake")
+## Before we find any packages, we want to pull in the common leatherman options, as they can affect commonly-used packages.
+include(options)
+## Pull in common cflags setting from leatherman. Don't override CMAKE_CXX_FLAGS at the project root to avoid impacting 3rd party code.
+include(cflags)
+set(${PROJECT_NAME_UPPER}_CXX_FLAGS "${LEATHERMAN_CXX_FLAGS}")
+add_definitions(${LEATHERMAN_DEFINITIONS})
+## Pull in helper macros for working with leatherman libraries
+include(leatherman)
+
+# pod2man setup
+include(pod2man)
 file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/share/man")
 pod2man(
   ${PROJECT_SOURCE_DIR}/man/puppet-db.pod
@@ -32,20 +44,6 @@ pod2man(
   "puppet-query" 8 share/man
   "queries PuppetDB data"
 )
-
-# Leatherman setup
-include(FeatureSummary)
-SET(LEATHERMAN_COMPONENTS locale catch nowide logging util file_util rapidjson json_container)
-find_package(Leatherman 0.3.6 REQUIRED COMPONENTS ${LEATHERMAN_COMPONENTS})
-
-## Before we find any packages, we want to pull in the common leatherman options, as they can affect commonly-used packages.
-include(options)
-## Pull in common cflags setting from leatherman. Don't override CMAKE_CXX_FLAGS at the project root to avoid impacting 3rd party code.
-include(cflags)
-set(${PROJECT_NAME_UPPER}_CXX_FLAGS "${LEATHERMAN_CXX_FLAGS}")
-add_definitions(${LEATHERMAN_DEFINITIONS})
-## Pull in helper macros for working with leatherman libraries
-include(leatherman)
 
 # Add other dependencies
 find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
