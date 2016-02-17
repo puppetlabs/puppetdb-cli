@@ -18,6 +18,18 @@ namespace puppetdb {
 LIBPUPPETDB_EXPORT typedef std::vector<std::string> server_urls_t;
 
 /**
+ * SSL credentials for cURL
+ */
+struct LIBPUPPETDB_EXPORT SSLCredentials {
+    /// cacert string cacert to use for curl.
+    const std::string cacert;
+    /// cert client cert to use for curl.
+    const std::string cert;
+    /// key client private key to use for curl.
+    const std::string key;
+};
+
+/**
  * Implements a PuppetDB Connection
  */
 class LIBPUPPETDB_EXPORT PuppetDBConn  {
@@ -30,28 +42,20 @@ class LIBPUPPETDB_EXPORT PuppetDBConn  {
     /**
      * Construct a PuppetDB connection using only config flags
      * @param urls string of the urls of PuppetDB.
-     * @param cacert string cacert to use for curl.
-     * @param cert client cert to use for curl.
-     * @param key client private key to use for curl.
+     * @param ssl_creds SSLCrendentials ssl auth credentials to use for curl.
      */
     PuppetDBConn(const std::string& urls,
-                 const std::string& cacert,
-                 const std::string& cert,
-                 const std::string& key);
+                 const SSLCredentials& ssl_creds);
 
     /**
      * Construct a PuppetDB connection using a config
      * @param config JsonContainer of the cli configuration.
      * @param urls string of the urls of PuppetDB.
-     * @param cacert string cacert to use for curl.
-     * @param cert client cert to use for curl.
-     * @param key client private key to use for curl.
+     * @param ssl_creds SSLCrendentials ssl auth credentials to use for curl.
      */
     PuppetDBConn(const leatherman::json_container::JsonContainer& config,
                  const std::string& urls,
-                 const std::string& cacert,
-                 const std::string& cert,
-                 const std::string& key);
+                 const SSLCredentials& ssl_creds);
 
     ~PuppetDBConn() {}
 
@@ -90,17 +94,17 @@ LIBPUPPETDB_EXPORT std::string version();
 /**
  * Parse a `puppetdb-cli` config file and return a PuppetDB connection.
  * @param config_path string path to your PuppetDB CLI configuration.
+ * @param urls string of the urls of PuppetDB.
+ * @param ssl_creds SSLCrendentials ssl auth credentials to use for curl.
  * @return PuppetDBConn for connecting to PuppetDB.
  */
 LIBPUPPETDB_EXPORT PuppetDBConn get_puppetdb(const std::string& config_path,
                                              const std::string& urls,
-                                             const std::string& cacert,
-                                             const std::string& cert,
-                                             const std::string& key);
+                                             const SSLCredentials& ssl_creds);
 
 /**
  * Query a PuppetDB endpoint for a given config.
- * @param config JsonContainer of the cli configuration.
+ * @param conn PuppetDBConn of the cli configuration.
  * @param query string of the query for PuppetDB (can be either AST or PQL syntax).
  * @return This function does not return anything.
  */
@@ -109,7 +113,7 @@ LIBPUPPETDB_EXPORT void pdb_query(const PuppetDBConn& conn,
 
 /**
  * Export a PuppetDB archive for a given config.
- * @param config JsonContainer of the cli configuration.
+ * @param conn PuppetDBConn of the cli configuration.
  * @param path string of the file path to which to stream the archive.
  * @param anonymization string of the anonymization to apply to the archive.
  * @return This function does not return anything.

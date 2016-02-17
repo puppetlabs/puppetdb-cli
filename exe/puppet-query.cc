@@ -95,12 +95,14 @@ main(int argc, char **argv) {
         const auto lvl = vm["log-level"].as<logging::log_level>();
         logging::set_level(lvl);
 
+        const puppetdb::SSLCredentials ssl_creds =
+                { vm["cacert"].as<string>(),
+                  vm["cert"].as<string>(),
+                  vm["key"].as<string>() };
         const auto pdb_conn = puppetdb::get_puppetdb(
             vm["config"].as<string>(),
             vm["urls"].as<string>(),
-            vm["cacert"].as<string>(),
-            vm["cert"].as<string>(),
-            vm["key"].as<string>());
+            ssl_creds);
         const auto query = vm["query"].as<string>();
         puppetdb::pdb_query(pdb_conn, query);
     } catch (exception& ex) {

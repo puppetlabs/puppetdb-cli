@@ -49,14 +49,13 @@ read_config(const string& config_path) {
 PuppetDBConn
 parse_config(const string& config_content,
              const string& urls,
-             const string& cacert,
-             const string& cert,
-             const string& key) {
+             const SSLCredentials& ssl_creds) {
     const json::JsonContainer raw_config(config_content);
     const auto puppetdb_conn = raw_config.includes("puppetdb") ?
             PuppetDBConn(raw_config.get<json::JsonContainer>("puppetdb"),
-                         urls, cacert, cert, key):
-            PuppetDBConn(urls, cacert, cert, key);
+                         urls,
+                         ssl_creds):
+            PuppetDBConn(urls, ssl_creds);
     if (puppetdb_conn.getServerUrl().empty()) {
         throw std::runtime_error { "invalid `server_urls` in configuration" };
     }
@@ -93,12 +92,10 @@ parse_server_urls(const json::JsonContainer& config) {
 PuppetDBConn
 get_puppetdb(const string& config_path,
              const string& urls,
-             const string& cacert,
-             const string& cert,
-             const string& key) {
+             const SSLCredentials& ssl_creds) {
     const auto config_content = read_config(config_path);
-    return config_content.empty() ? PuppetDBConn(urls, cacert, cert, key)
-            : parse_config(config_content, urls, cacert, cert, key);
+    return config_content.empty() ? PuppetDBConn(urls, ssl_creds)
+            : parse_config(config_content, urls, ssl_creds);
 }
 
 PuppetDBConn::PuppetDBConn() :
@@ -108,34 +105,30 @@ PuppetDBConn::PuppetDBConn() :
         key_ {} {};
 
 PuppetDBConn::PuppetDBConn(const string& urls,
-                           const string& cacert,
-                           const string& cert,
-                           const string& key) :
+                           const SSLCredentials& ssl_creds) :
         server_urls_ { urls.empty() ?
             default_server_urls :
             parse_server_urls_str(urls)},
-        cacert_ { cacert },
-        cert_ { cert },
-        key_ { key } {};
+        cacert_ { ssl_creds.cacert },
+        cert_ { ssl_creds.cert },
+        key_ { ssl_creds.key } {};
 
 PuppetDBConn::PuppetDBConn(const json::JsonContainer& config,
                            const string& urls,
-                           const string& cacert,
-                           const string& cert,
-                           const string& key) :
+                           const SSLCredentials& ssl_creds) :
         server_urls_ { urls.empty() ?
             parse_server_urls(config) :
             parse_server_urls_str(urls)},
-        cacert_ { cacert },
-        cert_ { cert },
-        key_ { key } {
-            if (cacert.empty() && config.includes("cacert")) {
+        cacert_ { ssl_creds.cacert },
+        cert_ { ssl_creds.cert },
+        key_ { ssl_creds.key } {
+            if (cacert_.empty() && config.includes("cacert")) {
                 cacert_ = config.get<std::string>("cacert");
             }
-            if (cert.empty() && config.includes("cert")) {
+            if (cert_.empty() && config.includes("cert")) {
                 cert_ = config.get<std::string>("cert");
             }
-            if (key.empty() && config.includes("key")) {
+            if (key_.empty() && config.includes("key")) {
                 key_ = config.get<std::string>("key");
             }};
 
