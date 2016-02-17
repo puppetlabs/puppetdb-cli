@@ -35,10 +35,11 @@ main(int argc, char **argv) {
         po::options_description global_options("global options");
         global_options.add_options()
                 ("help,h", "produce help message")
-                ("config", po::value<string>()->default_value(""),
-                 "path to use for CLI configuration")
+                ("config,c", po::value<string>()->default_value(
+                    "~/.puppetlabs/client-tools/puppetdb.conf"),
+                 "path to use for cli configuration")
                 ("urls", po::value<string>()->default_value(""),
-                 "urls to use for PuppetDB")
+                 "urls, `http://foo:8080,http://bar:8080`, to use for puppetdb")
                 ("cacert", po::value<string>()->default_value(""),
                  "cacert to use for curl")
                 ("cert", po::value<string>()->default_value(""),
@@ -70,6 +71,8 @@ main(int argc, char **argv) {
             po::store(parsed, vm);
 
             if (vm.count("help")) {
+                // if they explicitly wanted a help message, direct the output
+                // to cout and return success
                 help(global_options, nowide::cout);
                 return EXIT_SUCCESS;
             }

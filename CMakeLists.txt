@@ -45,6 +45,12 @@ pod2man(
   "queries PuppetDB data"
 )
 
+pod2man(
+  ${PROJECT_SOURCE_DIR}/man/puppetdb_conf.pod
+  "puppetdb_conf" 8 share/man
+  "PuppetDB CLI configuration"
+)
+
 # Add other dependencies
 find_package(Boost 1.54 REQUIRED COMPONENTS program_options filesystem)
 find_package(CURL REQUIRED)
@@ -74,7 +80,6 @@ enable_cpplint()
 
 add_cppcheck_dirs("${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/exe")
 enable_cppcheck()
-
 
 add_test(NAME "db_help_test" COMMAND puppet-db --help)
 add_test(NAME "query_help_test" COMMAND puppet-query --help)

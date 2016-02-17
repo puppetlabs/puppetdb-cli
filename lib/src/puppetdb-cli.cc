@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
 #include <boost/filesystem.hpp>
@@ -24,6 +25,8 @@ namespace json = leatherman::json_container;
 namespace futil = leatherman::file_util;
 namespace logging = leatherman::logging;
 
+const server_urls_t default_server_urls = { "http://127.0.0.1:8080" };
+
 string
 version()
 {
@@ -33,12 +36,14 @@ version()
 
 string
 read_config(const string& config_path) {
-    const string defaulted_config_path = config_path.empty() ?
-            "~/.puppetlabs/client-tools/puppetdb.conf" : config_path;
     const string expanded_config_path
-    { futil::tilde_expand(defaulted_config_path) };
-    return fs::exists(expanded_config_path) ?
-            futil::read(expanded_config_path) : "";
+    { futil::tilde_expand(config_path) };
+    if (fs::exists(expanded_config_path)) {
+        return futil::read(expanded_config_path);
+    } else {
+        LOG_WARNING("config file %1% does not exist. Using default configuration.", config_path);
+        return "";
+    }
 }
 
 PuppetDBConn
@@ -58,21 +63,14 @@ parse_config(const string& config_content,
     return puppetdb_conn;
 }
 
-vector<string> split(string str, char delimiter) {
-    vector<string> internal;
-    stringstream ss(str);
-    string tok;
-
-    while (getline(ss, tok, delimiter)) {
-        internal.push_back(tok);
-    }
-
-    return internal;
-}
-
 server_urls_t
 parse_server_urls_str(const string& urls) {
-    return split(urls, ',');
+    server_urls_t server_urls;
+    boost::split(server_urls,
+                 urls,
+                 boost::is_any_of(","),
+                 boost::token_compress_on);
+    return server_urls;
 }
 
 
@@ -88,7 +86,7 @@ parse_server_urls(const json::JsonContainer& config) {
             return {};
         }
     } else {
-        return {"http://127.0.0.1:8080"};
+        return default_server_urls;
     }
 }
 
@@ -104,7 +102,7 @@ get_puppetdb(const string& config_path,
 }
 
 PuppetDBConn::PuppetDBConn() :
-        server_urls_ { { "http://127.0.0.1:8080" } } ,
+        server_urls_ { default_server_urls } ,
         cacert_ {},
         cert_ {},
         key_ {} {};
@@ -114,7 +112,7 @@ PuppetDBConn::PuppetDBConn(const string& urls,
                            const string& cert,
                            const string& key) :
         server_urls_ { urls.empty() ?
-            vector<string>({ "http://127.0.0.1:8080" }) :
+            default_server_urls :
             parse_server_urls_str(urls)},
         cacert_ { cacert },
         cert_ { cert },

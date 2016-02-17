@@ -22,8 +22,8 @@ help(po::options_description& global_desc,
      po::options_description& import_subcommand_desc,
      ostream& os)
 {
-    os << "usage: puppet-db [global] export [options]\n"
-       << "       puppet-db [global] import [options]\n"
+    os << "usage: puppet-db [global] export <outfile> [options]\n"
+       << "       puppet-db [global] import <infile>\n"
        << global_desc << "\n"
        << export_subcommand_desc << "\n"
        << import_subcommand_desc << endl;
@@ -41,10 +41,11 @@ main(int argc, char **argv) {
         po::options_description global_options("global options");
         global_options.add_options()
                 ("help,h", "produce help message")
-                ("config", po::value<string>()->default_value(""),
-                 "path to use for CLI configuration")
+                ("config,c", po::value<string>()->default_value(
+                    "~/.puppetlabs/client-tools/puppetdb.conf"),
+                 "path to use for cli configuration")
                 ("urls", po::value<string>()->default_value(""),
-                 "urls to use for PuppetDB")
+                 "list of urls for connecting to puppetdb, urls can be comma separated")
                 ("cacert", po::value<string>()->default_value(""),
                  "cacert to use for curl")
                 ("cert", po::value<string>()->default_value(""),
@@ -102,6 +103,8 @@ main(int argc, char **argv) {
             }
 
             if (vm.count("help")) {
+                // if they explicitly wanted a help message, direct the output
+                // to cout and return success
                 help(global_options,
                      export_subcommand_options,
                      import_subcommand_options,
