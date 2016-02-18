@@ -41,9 +41,8 @@ namespace logging = leatherman::logging;
 const server_urls_t default_server_urls = { "http://127.0.0.1:8080" };
 
 string
-version()
-{
-    LOG_DEBUG("puppetdb-cli version is {1}", PUPPETDB_CLI_VERSION_WITH_COMMIT);
+version() {
+    LOG_DEBUG("puppetdb-cli version is %1%", PUPPETDB_CLI_VERSION_WITH_COMMIT);
     return PUPPETDB_CLI_VERSION_WITH_COMMIT;
 }
 
@@ -115,7 +114,7 @@ PuppetDBConn::PuppetDBConn() :
         server_urls_ { default_server_urls } ,
         cacert_ {},
         cert_ {},
-        key_ {};
+        key_ {} {};
 
 PuppetDBConn::PuppetDBConn(const string& urls,
                            const SSLCredentials& ssl_creds) :
@@ -157,22 +156,6 @@ PuppetDBConn::getCurlHandle() const {
     if (!cert_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
     if (!key_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
     return curl;
-}
-
-server_urls_t
-PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
-    if (config.includes("server_urls")) {
-        const auto urls_type = config.type("server_urls");
-        if (urls_type == json::DataType::Array) {
-            return config.get<server_urls_t>("server_urls");
-        } else if (urls_type == json::DataType::String) {
-            return { config.get<string>("server_urls") };
-        } else {
-            return {};
-        }
-    } else {
-        return {"http://127.0.0.1:8080"};
-    }
 }
 
 template<typename T>
@@ -227,7 +210,7 @@ size_t write_queue(char *ptr, size_t size, size_t nmemb, CURLResponseData& ctx) 
             if (!header.starts_with("HTTP/")) {
                 auto pos = header.find_first_of(':');
                 if (pos == boost::string_ref::npos) {
-                    LOG_WARNING("unexpected HTTP response header: {1}.", header);
+                    LOG_WARNING("unexpected HTTP response header: %1%.", header);
                 } else {
                     auto name = header.substr(0, pos).to_string();
                     boost::trim(name);
