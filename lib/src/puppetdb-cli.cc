@@ -175,60 +175,54 @@ PuppetDBConn::parseServerUrls(const json::JsonContainer& config) {
     }
 }
 
-class SynchronizedCharQueue {
+template<typename T>
+class SynchronizedQueue {
   public:
-    vector<char> front() {
+    T front() {
         boost::unique_lock<boost::mutex> mlock(mutex_);
         cond_.wait(mlock, [&]{ return !queue_.empty(); });
         return queue_.front();
     }
 
-    vector<char> pop() {
+    T pop() {
         boost::unique_lock<boost::mutex> mlock(mutex_);
         cond_.wait(mlock, [&]{ return !queue_.empty(); });
-        vector<char> item( queue_.front() );
+        auto item = queue_.front();
         queue_.pop();
         return item;
     }
 
-    void push(vector<char>&& items) {
+    void push(T&& items) {
         boost::unique_lock<boost::mutex> mlock(mutex_);
         queue_.push(items);
         mlock.unlock();
         cond_.notify_one();
     }
 
-    void push(const char& item) {
-        boost::unique_lock<boost::mutex> mlock(mutex_);
-        queue_.push({item});
-        mlock.unlock();
-        cond_.notify_one();
-    }
-
   private:
-    queue< vector<char> > queue_;
+    queue<T> queue_;
     boost::mutex mutex_;
     boost::condition_variable cond_;
 };
 
-struct UserData {
+struct CURLResponseData {
     bool collecting_header;
     vector<string> headers;
     string content_type;
     string error_response;
-    SynchronizedCharQueue stream;
+    SynchronizedQueue< vector<char> > stream;
 };
 
-size_t write_queue(char *ptr, size_t size, size_t nmemb, UserData& userdata) {
+size_t write_queue(char *ptr, size_t size, size_t nmemb, CURLResponseData& ctx) {
     const size_t written = size * nmemb;
-    if (userdata.collecting_header) {
+    if (ctx.collecting_header) {
         if (written == 2 && ptr[0] == '\r' && ptr[1] == '\n') {
             // We've reached the end of the header
-            userdata.collecting_header = false;
+            ctx.collecting_header = false;
             return written;
         } else {
             boost::string_ref header(ptr, written);
-            userdata.headers.push_back(header.to_string());
+            ctx.headers.push_back(header.to_string());
 
             if (!header.starts_with("HTTP/")) {
                 auto pos = header.find_first_of(':');
@@ -240,13 +234,13 @@ size_t write_queue(char *ptr, size_t size, size_t nmemb, UserData& userdata) {
                     if (name == "Content-Type") {
                         auto value = header.substr(pos + 1).to_string();
                         boost::trim(value);
-                        userdata.content_type = value;
+                        ctx.content_type = value;
                     }
                 }
             }
         }
     } else {
-        userdata.stream.push(vector<char>(ptr, ptr + written));
+        ctx.stream.push(vector<char>(ptr, ptr + written));
     }
     return written;
 }
@@ -260,22 +254,23 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
     return size * nmemb;
 }
 
-// SynchronizedCharQueueWrapper is a rapidjson adapter which satisfies the
+// SynchronizedQueueWrapper is a rapidjson adapter which satisfies the
 // `ReadStream` interface for a rapidjson::Reader. This allows us to parse data
 // from curl as we recieve it.
-class SynchronizedCharQueueWrapper {
+class SynchronizedQueueWrapper {
   public:
     typedef char Ch;
-    SynchronizedCharQueueWrapper(SynchronizedCharQueue& stream) : stream_(stream),
-                                                                  count_(0),
-                                                                  buffer_(stream_.pop()),
-                                                                  buffer_iterator_(buffer_.begin()) {}
+    SynchronizedQueueWrapper(SynchronizedQueue< vector<char> >& stream)
+            : stream_(stream),
+              count_(0),
+              buffer_(stream_.pop()),
+              buffer_iterator_(buffer_.begin()) {}
     char Peek() const {
-        int c = Front();
+        const int c = Front();
         return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
     }
     char Take() {
-        int c = Get();
+        const int c = Get();
         return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
     }
     size_t Tell() const { return count_; }
@@ -287,7 +282,7 @@ class SynchronizedCharQueueWrapper {
   private:
     int Front() const { return *buffer_iterator_; }
     int Get() {
-        int c = *buffer_iterator_;
+        const int c = *buffer_iterator_;
         count_++;
         ++buffer_iterator_;
         if (buffer_iterator_ == buffer_.end()) {
@@ -296,22 +291,22 @@ class SynchronizedCharQueueWrapper {
         }
         return c;
     }
-    SynchronizedCharQueueWrapper(const SynchronizedCharQueueWrapper&);
-    SynchronizedCharQueueWrapper& operator=(const SynchronizedCharQueueWrapper&);
-    SynchronizedCharQueue& stream_;
+    SynchronizedQueueWrapper(const SynchronizedQueueWrapper&);
+    SynchronizedQueueWrapper& operator=(const SynchronizedQueueWrapper&);
+    SynchronizedQueue< vector<char> >& stream_;
     size_t count_;
     vector<char> buffer_;
     vector<char>::iterator buffer_iterator_;
 };
 
-void write_pretty(UserData& userdata) {
+void write_pretty(CURLResponseData& ctx) {
     // This will make sure to block until we have parsed the header
-    userdata.stream.front();
+    ctx.stream.front();
 
-    boost::string_ref content_type{ userdata.content_type };
+    boost::string_ref content_type{ ctx.content_type };
     if (content_type.starts_with("application/json")) {
         rapidjson::Reader reader;
-        SynchronizedCharQueueWrapper is(userdata.stream);
+        SynchronizedQueueWrapper is(ctx.stream);
         char writeBuffer[65536];
         rapidjson::FileWriteStream os(stdout, writeBuffer, sizeof(writeBuffer));
         rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
@@ -321,14 +316,14 @@ void write_pretty(UserData& userdata) {
     } else {
         vector<char> buffer;
         do {
-            buffer = userdata.stream.pop();
+            buffer = ctx.stream.pop();
         } while (buffer.empty());
 
         // We always signal the end with a vector of `{ '\0' }`
         while ( static_cast<int>(buffer[0]) != char_traits<char>::eof() ) {
-            userdata.error_response.append(buffer.begin(), buffer.end());
+            ctx.error_response.append(buffer.begin(), buffer.end());
             do {
-                buffer = userdata.stream.pop();
+                buffer = ctx.stream.pop();
             } while (buffer.empty());
         }
     }
@@ -361,14 +356,14 @@ pdb_query(const PuppetDBConn& conn,
                      CURLOPT_HTTPHEADER,
                      curl_slist_append(headers.get(), "Content-Type: application/json"));
 
-    UserData userdata;
-    userdata.collecting_header = true;
+    CURLResponseData ctx;
+    ctx.collecting_header = true;
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &userdata);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &ctx);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);
     curl_easy_setopt(curl.get(), CURLOPT_HEADER, 1L);
 
-    boost::thread t1(write_pretty, boost::ref(userdata));
+    boost::thread t1(write_pretty, boost::ref(ctx));
     const CURLcode curl_code = curl_easy_perform(curl.get());
     if (curl_code != CURLE_OK) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
@@ -378,14 +373,14 @@ pdb_query(const PuppetDBConn& conn,
         return;
     }
 
-    userdata.stream.push(char_traits<char>::eof());
+    ctx.stream.push(vector<char>({char_traits<char>::eof()}));
     t1.join();
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
     if (http_code != 200) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "error status " << http_code << " querying PuppetDB:" << endl;
-        nowide::cerr << userdata.error_response << endl;
+        nowide::cerr << ctx.error_response << endl;
         logging::colorize(nowide::cerr);
     }
 }
