@@ -28,6 +28,30 @@ the options specific to that action.
 
 Displays version information
 
+=item B<-c>,B<--config> <path>
+
+Overrides the path for the PuppetDB CLI config. For more information about
+PuppetDB CLI configuration, see puppetdb_conf(8).
+Default: ~/.puppetlabs/client-tools/puppetdb.conf
+
+=item B<--urls> <str>
+
+Overrides the SERVER_URLS setting for the PuppetDB service. These urls points to
+your PuppetDB instances. You can specify multiple urls as a comma-delimitted
+list, 'http://foo:8080,http://bar.com:8080'.
+
+=item B<--cacert> <path>
+
+Overrides the path for the Puppet CA cert.
+
+=item B<--cert> <path>
+
+Overrides the path for the Puppet client cert.
+
+=item B<--key> <path>
+
+Overrides the path for the Puppet client private key.
+
 =back
 
 =head1 ACTIONS
@@ -36,29 +60,32 @@ Displays version information
       The export action will export a PuppetDB archive from PuppetDB. The
       default location of this archive will be './pdb-export.tgz' relative to
       wherever the command was run from. You can specify a different location to
-      export to using the '--outfile <path>' option. Additionally you can
-      specify what level of anonymization you want for your archive using the
-      '--anonymization <str>' flag, for more information about PuppetDB archive
-      anonymization, consult the documentation at:
+      export as an optional argument. Additionally you can specify what level of
+      anonymization you want for your archive using the '--anonymization <str>'
+      flag, for more information about PuppetDB archive anonymization, consult
+      the documentation at:
       [http://docs.puppetlabs.com/puppetdb/master/anonymization.html]
 
-  $ puppet-db import [options]
+  $ puppet-db import <path>
+      The import action will import a PuppetDB archive to PuppetDB. You must
+      specify the location of the archive to the import action as a path.
 
-      The import action will import a PuppetDB archive to PuppetDB. You can
-      specify the location of the archive with the '--infile <path>' option.
+=head1 SEE ALSO
+
+puppet-db(8), puppetdb_conf(8)
 
 =head1 EXAMPLES
 
     --------------------------------------------------------------------
     Example #1 - Export a PuppetDB archive:
 
-    $ puppet-db export
+    $ puppet-db export ./my-pdb-export.tgz
     Exporting PuppetDB...
-    Finished exporting PuppetDB archive to ./pdb-export.tgz.
+    Finished exporting PuppetDB archive to ./my-pdb-export.tgz.
 
     --------------------------------------------------------------------
     Example #2 - Import a PuppetDB archive:
 
-    $ puppet-db import --infile pdb-export.tgz
-    Importing pdb-export.tgz to PuppetDB...
-    Finished importing pdb-export.tgz to PuppetDB.
+    $ puppet-db import ./my-pdb-export.tgz
+    Importing ./my-pdb-export.tgz to PuppetDB...
+    Finished importing ./my-pdb-export.tgz to PuppetDB.
