@@ -10,6 +10,8 @@ addons:
     packages:
       - gcc-4.8
       - g++-4.8
+      - curl
+      - libcurl4-openssl-dev
       - libboost-filesystem1.55-dev
       - libboost-program-options1.55-dev
       - libboost-regex1.55-dev

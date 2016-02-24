@@ -66,10 +66,10 @@ class LIBPUPPETDB_EXPORT PuppetDBConn  {
     std::string getServerUrl() const;
 
     /**
-     * Get a cURL handle with SSL configuration attached
-     * @return a unique_ptr to a cURL handle
+     * Get the SSLCredentials from the PuppetDB config
+     * @return the SSLCredentials for the PuppetDB connection
      */
-    std::unique_ptr<CURL, std::function<void(CURL*)> > getCurlHandle() const;
+    SSLCredentials getSSLCredentials() const;
 
 
   private:

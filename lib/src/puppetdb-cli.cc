@@ -9,13 +9,6 @@
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/filewritestream.h>
 
-
-#define BOOST_THREAD_PROVIDES_GENERIC_SHARED_MUTEX_ON_WIN
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/lock_types.hpp>
-#include <boost/thread/condition_variable.hpp>
 #include <boost/utility/string_ref.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/iostream.hpp>
@@ -148,168 +141,9 @@ string PuppetDBConn::getServerUrl() const {
     return server_urls_.size() ? server_urls_[0] : "";
 }
 
-unique_ptr<CURL, function<void(CURL*)> >
-PuppetDBConn::getCurlHandle() const {
-    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
-                                                          curl_easy_cleanup);
-    if (!cacert_.empty()) curl_easy_setopt(curl.get(), CURLOPT_CAINFO, cacert_.c_str());
-    if (!cert_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, cert_.c_str());
-    if (!key_.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, key_.c_str());
-    return curl;
-}
-
-template<typename T>
-class SynchronizedQueue {
-  public:
-    T front() {
-        boost::unique_lock<boost::mutex> mlock(mutex_);
-        cond_.wait(mlock, [&]{ return !queue_.empty(); });
-        return queue_.front();
-    }
-
-    T pop() {
-        boost::unique_lock<boost::mutex> mlock(mutex_);
-        cond_.wait(mlock, [&]{ return !queue_.empty(); });
-        auto item = queue_.front();
-        queue_.pop();
-        return item;
-    }
-
-    void push(T&& items) {
-        boost::unique_lock<boost::mutex> mlock(mutex_);
-        queue_.push(items);
-        mlock.unlock();
-        cond_.notify_one();
-    }
-
-  private:
-    queue<T> queue_;
-    boost::mutex mutex_;
-    boost::condition_variable cond_;
-};
-
-struct CURLResponseData {
-    bool collecting_header;
-    vector<string> headers;
-    string content_type;
-    string error_response;
-    SynchronizedQueue< vector<char> > stream;
-};
-
-size_t write_queue(char *ptr, size_t size, size_t nmemb, CURLResponseData& ctx) {
-    const size_t written = size * nmemb;
-    if (ctx.collecting_header) {
-        if (written == 2 && ptr[0] == '\r' && ptr[1] == '\n') {
-            // We've reached the end of the header
-            ctx.collecting_header = false;
-            return written;
-        } else {
-            boost::string_ref header(ptr, written);
-            ctx.headers.push_back(header.to_string());
-
-            if (!header.starts_with("HTTP/")) {
-                auto pos = header.find_first_of(':');
-                if (pos == boost::string_ref::npos) {
-                    LOG_WARNING("unexpected HTTP response header: %1%.", header);
-                } else {
-                    auto name = header.substr(0, pos).to_string();
-                    boost::trim(name);
-                    if (name == "Content-Type") {
-                        auto value = header.substr(pos + 1).to_string();
-                        boost::trim(value);
-                        ctx.content_type = value;
-                    }
-                }
-            }
-        }
-    } else {
-        ctx.stream.push(vector<char>(ptr, ptr + written));
-    }
-    return written;
-}
-
-size_t write_data(char *ptr, size_t size, size_t nmemb, FILE *stream) {
-    const size_t written = fwrite(ptr, size, nmemb, stream);
-    return written;
-}
-
-size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
-    return size * nmemb;
-}
-
-// SynchronizedQueueWrapper is a rapidjson adapter which satisfies the
-// `ReadStream` interface for a rapidjson::Reader. This allows us to parse data
-// from curl as we recieve it.
-class SynchronizedQueueWrapper {
-  public:
-    typedef char Ch;
-    SynchronizedQueueWrapper(SynchronizedQueue< vector<char> >& stream)
-            : stream_(stream),
-              count_(0),
-              buffer_(stream_.pop()),
-              buffer_iterator_(buffer_.begin()) {}
-    char Peek() const {
-        const int c = Front();
-        return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
-    }
-    char Take() {
-        const int c = Get();
-        return c == char_traits<char>::eof() ? '\0' : static_cast<char>(c);
-    }
-    size_t Tell() const { return count_; }
-    char* PutBegin() { assert(false); return 0; }
-    void Put(char c) { assert(false); }
-    void Flush() { assert(false); }
-    size_t PutEnd(char* c) { assert(false); return 0; }
-
-  private:
-    int Front() const { return *buffer_iterator_; }
-    int Get() {
-        const int c = *buffer_iterator_;
-        count_++;
-        ++buffer_iterator_;
-        if (buffer_iterator_ == buffer_.end()) {
-            buffer_ = stream_.pop();
-            buffer_iterator_ = buffer_.begin();
-        }
-        return c;
-    }
-    SynchronizedQueueWrapper(const SynchronizedQueueWrapper&);
-    SynchronizedQueueWrapper& operator=(const SynchronizedQueueWrapper&);
-    SynchronizedQueue< vector<char> >& stream_;
-    size_t count_;
-    vector<char> buffer_;
-    vector<char>::iterator buffer_iterator_;
-};
-
-void write_pretty(CURLResponseData& ctx) {
-    // This will make sure to block until we have parsed the header
-    ctx.stream.front();
-
-    boost::string_ref content_type{ ctx.content_type };
-    if (content_type.starts_with("application/json")) {
-        rapidjson::Reader reader;
-        SynchronizedQueueWrapper is(ctx.stream);
-        char writeBuffer[65536];
-        rapidjson::FileWriteStream os(stdout, writeBuffer, sizeof(writeBuffer));
-        rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer(os);
-        if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer)) {
-            nowide::cerr << "error parsing response" << endl;
-        }
-    } else {
-        vector<char> buffer;
-        do {
-            buffer = ctx.stream.pop();
-        } while (buffer.empty());
-
-        // We always signal the end with a vector of `{ '\0' }`
-        while ( static_cast<int>(buffer[0]) != char_traits<char>::eof() ) {
-            ctx.error_response.append(buffer.begin(), buffer.end());
-            do {
-                buffer = ctx.stream.pop();
-            } while (buffer.empty());
-        }
-    }
+SSLCredentials
+PuppetDBConn::getSSLCredentials() const {
+    return SSLCredentials{ cacert_, cert_, key_ };
 }
 
 string
@@ -318,61 +152,240 @@ convert_query_to_post_data(const string& query_str) {
     // the query is AST and we leave it alone
     string query_str_copy { query_str };
     boost::trim(query_str_copy);
-    const string query = (query_str_copy[0] == '[') ? query_str:"\""+ query_str +"\"";
+    const string query = (boost::starts_with(query_str_copy, "[")) ?
+            query_str : "\""+ query_str +"\"";
     return "{\"query\":" + query + "}";
 }
+
+
+struct error_response_exception : runtime_error {
+  public:
+    error_response_exception(long status, string response) :
+        runtime_error("error status from server."),
+        _status(status),
+        _response(move(response)) {}
+
+    long status() const { return _status; }
+    string const& response() const { return _response; }
+
+ private:
+    long _status;
+    string _response;
+};
+
+struct curl_input_stream {
+  public:
+    using Ch = char;
+
+    explicit curl_input_stream(const string& url,
+                               const string& post_fields,
+                               const SSLCredentials& ssl_creds) {
+        try {
+            _multi_handle = curl_multi_init();
+            if (!_multi_handle)
+                throw runtime_error("failed to initialize multi handle.");
+
+            _easy_handle = curl_easy_init();
+            if (!_easy_handle)
+                throw runtime_error("failed to initialize easy handle.");
+
+            if (curl_multi_add_handle(_multi_handle, _easy_handle) != CURLM_OK)
+                throw runtime_error("failed to add easy handle to multi handle.");
+
+            if (!ssl_creds.cacert.empty() &&
+                curl_easy_setopt(_easy_handle, CURLOPT_CAINFO, ssl_creds.cacert.c_str()) != CURLE_OK)
+                throw runtime_error("failed to set ca info option.");
+            if (!ssl_creds.cert.empty() &&
+                curl_easy_setopt(_easy_handle, CURLOPT_SSLCERT, ssl_creds.cert.c_str()) != CURLE_OK)
+                throw runtime_error("failed to set ssl cert option.");
+            if (!ssl_creds.key.empty() &&
+                curl_easy_setopt(_easy_handle, CURLOPT_SSLKEY, ssl_creds.key.c_str()) != CURLE_OK)
+                throw runtime_error("failed to set ssl key option.");
+
+            if (curl_easy_setopt(_easy_handle, CURLOPT_URL, url.c_str()) != CURLE_OK)
+                throw runtime_error("failed to set url option.");
+
+            if (curl_easy_setopt(_easy_handle, CURLOPT_POSTFIELDS, post_fields.c_str()) != CURLE_OK)
+                throw runtime_error("failed to set post fields option.");
+
+            if (curl_easy_setopt(_easy_handle, CURLOPT_HTTPHEADER,
+                                 curl_slist_append(_headers, "Content-Type: application/json")) != CURLE_OK)
+                throw runtime_error("failed to set http header option.");
+
+            if (curl_easy_setopt(_easy_handle, CURLOPT_WRITEDATA, this) != CURLE_OK)
+                throw runtime_error("failed to set write data option.");
+
+            if (curl_easy_setopt(_easy_handle, CURLOPT_WRITEFUNCTION, process_response) != CURLE_OK)
+                throw runtime_error("failed to set write function option.");
+        } catch (exception const&) {
+            // Clean up anything that was allocated inside this constructor
+            this->~curl_input_stream();
+            throw;
+        }
+    }
+
+    ~curl_input_stream() {
+        if (_multi_handle) {
+            if (_easy_handle) {
+                curl_multi_remove_handle(_multi_handle, _easy_handle);
+                curl_easy_cleanup(_easy_handle);
+                _easy_handle = nullptr;
+            }
+            curl_multi_cleanup(_multi_handle);
+            _multi_handle = nullptr;
+        }
+
+        if (_headers)
+            curl_slist_free_all(_headers);
+    }
+
+    Ch Peek() const {
+        const_cast<curl_input_stream&>(*this).read();
+        return _offset >= _buffer.size() ? 0 : _buffer[_offset];
+    }
+
+    Ch Take() {
+        auto current = Peek();
+        ++_offset;
+        ++_read_count;
+        return current;
+    }
+
+    size_t Tell() const { return _read_count; }
+
+    Ch* PutBegin() { throw runtime_error("unexpected write to input stream."); }
+    void Put(Ch c) { throw runtime_error("unexpected write to input stream."); }
+    void Flush() { throw runtime_error("unexpected write to input stream."); }
+    size_t PutEnd(Ch* c) { throw runtime_error("unexpected write to input stream."); }
+
+  private:
+    static size_t process_response(char const* ptr, size_t size, size_t nmemb, void* data) {
+        const size_t written = size * nmemb;
+
+        if (written != 0) {
+            auto& buffer = reinterpret_cast<curl_input_stream*>(data)->_buffer;
+            buffer.insert(buffer.end(), ptr, ptr + written);
+        }
+        return written;
+    }
+
+    void read() {
+        if (_request_completed || _offset < _buffer.size())
+            return;
+
+        // Clear the buffer as we've processed its contents
+        _buffer.clear();
+        _offset = 0;
+
+        read_response();
+
+        if (!_headers_completed)
+            check_content_type();
+    }
+
+    void check_content_type() {
+        long status = 500;
+        curl_easy_getinfo(_easy_handle, CURLINFO_RESPONSE_CODE, &status);
+
+        if (status == 0)
+            throw runtime_error("failed to connect to server.");
+
+        if (status == 200) {
+            char* ct;
+            curl_easy_getinfo(_easy_handle, CURLINFO_CONTENT_TYPE, &ct);
+            const string content_type{ ct };
+            // Ensure the response is JSON
+            if (boost::starts_with(content_type, "application/json")) {
+                _headers_completed = true;
+                return;
+            }
+        }
+
+        throw error_response_exception(
+            status,
+            _buffer.empty() ? string{} : string(_buffer.begin(),
+                                                _buffer.end()));
+    }
+
+    void read_response() {
+        if (_request_completed)
+            return;
+
+        do {
+            if (curl_multi_wait(_multi_handle, nullptr, 0, -1, nullptr) != CURLM_OK)
+                throw runtime_error("failed to wait on multi handle.");
+
+            int remaining = 0;
+            if (curl_multi_perform(_multi_handle, &remaining) != CURLM_OK)
+                throw runtime_error("failed to perform multi action.");
+            if (remaining == 0) {
+                _request_completed = true;
+                break;
+            }
+        } while (_buffer.empty());
+    }
+
+    size_t _offset = 0;
+    size_t _read_count = 0;
+    vector<Ch> _buffer;
+    CURLM* _multi_handle = nullptr;
+    CURL* _easy_handle = nullptr;
+    struct curl_slist* _headers = NULL;
+    bool _headers_completed = false;
+    bool _request_completed = false;
+};
 
 void
 pdb_query(const PuppetDBConn& conn,
           const string& endpoint,
           const string& query_str) {
-    auto curl = conn.getCurlHandle();
     const string server_url = conn.getServerUrl() + endpoint;
-    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+    const auto ssl_creds = conn.getSSLCredentials();
 
-    const string post_data = convert_query_to_post_data(query_str);
-    curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
+    try {
+        char buffer[65000];
+        rapidjson::FileWriteStream output{ stdout, buffer, sizeof(buffer) };
+        rapidjson::PrettyWriter<rapidjson::FileWriteStream> writer{ output };
 
-    auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL,
-                                                                        curl_slist_free_all);
-    curl_easy_setopt(curl.get(),
-                     CURLOPT_HTTPHEADER,
-                     curl_slist_append(headers.get(), "Content-Type: application/json"));
-
-    CURLResponseData ctx;
-    ctx.collecting_header = true;
-    curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &ctx);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_queue);
-    curl_easy_setopt(curl.get(), CURLOPT_HEADER, 1L);
-
-    boost::thread t1(write_pretty, boost::ref(ctx));
-    const CURLcode curl_code = curl_easy_perform(curl.get());
-    if (curl_code != CURLE_OK) {
+        rapidjson::Reader reader;
+        const string post_fields = convert_query_to_post_data(query_str);
+        curl_input_stream input{ server_url, post_fields, ssl_creds };
+        if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(input, writer)) {
+            logging::colorize(nowide::cerr, logging::log_level::fatal);
+            nowide::cerr << "error: response was not valid JSON." << endl;
+            logging::colorize(nowide::cerr);
+        }
+        nowide::cout << endl;
+    } catch (error_response_exception const& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
-        nowide::cerr << "error connecting to PuppetDB: "
-                     << curl_easy_strerror(curl_code) << endl;
-        logging::colorize(nowide::cerr);
-        return;
-    }
-
-    ctx.stream.push(vector<char>({char_traits<char>::eof()}));
-    t1.join();
-    long http_code = 0;
-    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
-    if (http_code != 200) {
-        logging::colorize(nowide::cerr, logging::log_level::fatal);
-        nowide::cerr << "error status " << http_code << " querying PuppetDB:" << endl;
-        nowide::cerr << ctx.error_response << endl;
+        nowide::cerr << "unexpected response (status " << ex.status() << "):\n"
+                     << ex.response() << endl;
         logging::colorize(nowide::cerr);
     }
 }
+
+size_t write_data(char *ptr, size_t size, size_t nmemb, FILE *stream) {
+    const size_t written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
+
+size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata) {
+    return size * nmemb;
+}
+
 
 void
 pdb_export(const PuppetDBConn& conn,
            const string& path,
            const string& anonymization) {
-    auto curl = conn.getCurlHandle();
+    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
+                                                          curl_easy_cleanup);
+
+    const auto ssl_creds = conn.getSSLCredentials();
+    if (!ssl_creds.cacert.empty()) curl_easy_setopt(curl.get(), CURLOPT_CAINFO, ssl_creds.cacert.c_str());
+    if (!ssl_creds.cert.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, ssl_creds.cert.c_str());
+    if (!ssl_creds.key.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, ssl_creds.key.c_str());
+
     const string server_url = conn.getServerUrl()
             + "/pdb/admin/v1/archive?anonymization="
             + anonymization;
@@ -398,7 +411,14 @@ pdb_export(const PuppetDBConn& conn,
 void
 pdb_import(const PuppetDBConn& conn,
            const string& infile) {
-    auto curl = conn.getCurlHandle();
+    auto curl = unique_ptr< CURL, function<void(CURL*)> >(curl_easy_init(),
+                                                          curl_easy_cleanup);
+
+    const auto ssl_creds = conn.getSSLCredentials();
+    if (!ssl_creds.cacert.empty()) curl_easy_setopt(curl.get(), CURLOPT_CAINFO, ssl_creds.cacert.c_str());
+    if (!ssl_creds.cert.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLCERT, ssl_creds.cert.c_str());
+    if (!ssl_creds.key.empty()) curl_easy_setopt(curl.get(), CURLOPT_SSLKEY, ssl_creds.key.c_str());
+
     const string server_url = conn.getServerUrl() + "/pdb/admin/v1/archive";
 
     curl_httppost* formpost = NULL;
