@@ -4,6 +4,10 @@
 #include <sstream>
 #include <vector>
 
+#include <rapidjson/reader.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/nowide/iostream.hpp>
 #include <boost/nowide/args.hpp>
@@ -155,19 +159,45 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
     return size * nmemb;
 }
 
+string
+convert_query_to_post_data(const string& query_str) {
+    // If this is PQL then we need to wrap the query in double-quotes, otherwise
+    // the query is AST and we leave it alone
+    rapidjson::StringBuffer s;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+    writer.StartObject();
+    writer.String("query");
+
+    string query_str_copy { query_str };
+    boost::trim(query_str_copy);
+    if (boost::starts_with(query_str_copy, "[")) {
+        rapidjson::StringStream is(query_str.c_str());
+        rapidjson::Reader reader;
+        if (!reader.Parse<rapidjson::kParseValidateEncodingFlag>(is, writer))
+            throw std::runtime_error { "Failed to parse query. Ensure your query is valid JSON." };
+    } else {
+        writer.String(query_str.c_str());
+    }
+
+    writer.EndObject();
+    return s.GetString();
+}
+
 void
 pdb_query(const PuppetDBConn& conn,
           const string& query_str) {
     auto curl = conn.getCurlHandle();
-    auto url_encoded_query = unique_ptr< char, function<void(char*)> >(
-        curl_easy_escape(curl.get(), query_str.c_str(), query_str.length()),
-        curl_free);
-
-    const auto server_url = conn.getServerUrl()
-            + "/pdb/query/v4?query="
-            + url_encoded_query.get();
+    const auto server_url = conn.getServerUrl() + "/pdb/query/v4";
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
+
+    const string post_data = convert_query_to_post_data(query_str);
+    curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
+    auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL, curl_slist_free_all);
+    curl_easy_setopt(curl.get(),
+                     CURLOPT_HTTPHEADER,
+                     curl_slist_append(headers.get(), "Content-Type: application/json"));
+
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, stdout);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
 
