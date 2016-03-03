@@ -5,17 +5,14 @@ use hyper::client::request::Request;
 use hyper::client::response::Response;
 use hyper::error::Error;
 
-use rustc_serialize::json;
+use rustc_serialize::json::{self,ToJson};
 
 #[derive(RustcEncodable)]
-pub struct PdbQuery {
+pub struct PdbRequest {
     query: json::Json,
 }
 use multipart::client::Multipart;
 use url::Url;
-use std::fs::File;
-use tar::Archive;
-use flate2::read::GzDecoder;
 
 use std::path::Path;
 use openssl::ssl::{SslContext,SslMethod};
@@ -40,12 +37,23 @@ pub fn ssl_connector<C>(cacert: C, cert: C, key: C) -> HttpsConnector<Openssl>
     HttpsConnector::new(ctx)
 }
 
-#[derive(RustcDecodable, RustcEncodable, Default)]
+#[derive(RustcDecodable)]
 pub struct Config {
     pub server_urls: Vec<String>,
     pub cacert: String,
     pub cert: String,
     pub key: String,
+}
+
+impl Default for Config {
+    fn default() -> Config {
+        Config {
+            server_urls: vec!["http://127.0.0.1:8080".to_string()],
+            cacert: "".to_string(),
+            cert: "".to_string(),
+            key: "".to_string(),
+        }
+    }
 }
 
 pub fn client(config: Config) -> Client {
@@ -73,57 +81,16 @@ pub fn multipart(config: Config, url: Url) -> Multipart<Request<Streaming>> {
     Multipart::from_request(request).unwrap()
 }
 
-use std::io::Read;
-
-fn get_command_versions(path: &str) -> Option<String> {
-    let archive = File::open(&path).ok().expect("couldn't open archive file");
-    let gzip = GzDecoder::new(archive).unwrap();
-    let mut tar = Archive::new(gzip);
-    let mut metadata = String::new();
-    for file in tar.files_mut().unwrap() {
-        // Make sure there wasn't an I/O error
-        let mut file = file.unwrap();
-
-        // Inspect metadata about the file
-        if file.header().path().unwrap()
-            .into_owned().file_name().unwrap() == "export-metadata.json" {
-
-                file.read_to_string(&mut metadata).unwrap();
-                break;
-            };
-    }
-    if metadata.is_empty() {
-        None
-    } else {
-        Some(json::Json::from_str(&metadata).unwrap()
-             .as_object().unwrap()
-             .get("command_versions").unwrap()
-             .to_string())
-    }
-}
-
-const DEFAULT_COMMAND_VERSIONS: &'static str = "{\"replace_catalog\":7,\"store_report\":6,\"replace_facts\":4}";
-
 pub fn execute_import(config: Config, path: String) -> Result<Response,Error> {
-    let server_url: String = if config.server_urls.len() > 0 {
-        config.server_urls[0].clone()
-    } else {
-        "http://127.0.0.1:8080".to_owned()
-    };
+    let server_url: String = config.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
     let mut multipart = multipart(config, url);
-    multipart.write_text("command_versions",
-                         get_command_versions(&path).unwrap_or(DEFAULT_COMMAND_VERSIONS.to_owned()));
     multipart.write_file("archive", &path);
     multipart.send()
 }
 
 pub fn execute_export(config: Config, anonymization: String) -> Result<Response,Error> {
-    let server_url: String = if config.server_urls.len() > 0 {
-        config.server_urls[0].clone()
-    } else {
-        "http://127.0.0.1:8080".to_owned()
-    };
+    let server_url: String = config.server_urls[0].clone();
     client(config)
         .get(&(server_url + "/pdb/admin/v1/archive"))
         .body(&("anonymization=".to_string() + &anonymization))
@@ -132,13 +99,13 @@ pub fn execute_export(config: Config, anonymization: String) -> Result<Response,
 }
 
 pub fn execute_query(config: Config, query_str: String) -> Result<Response,Error> {
-    let server_url: String = if config.server_urls.len() > 0 {
-        config.server_urls[0].clone()
+    let server_url: String = config.server_urls[0].clone();
+    let query = if query_str.trim().starts_with("[") {
+        json::Json::from_str(&query_str).unwrap()
     } else {
-        "http://127.0.0.1:8080".to_owned()
+        query_str.to_json()
     };
-    let query = json::Json::from_str(&query_str).unwrap();
-    let pdb_query = PdbQuery{query: query};
+    let pdb_query = PdbRequest{query: query};
     let pdb_query_str = json::encode(&pdb_query).unwrap().to_string();
 
     client(config)
@@ -147,4 +114,37 @@ pub fn execute_query(config: Config, query_str: String) -> Result<Response,Error
         .header(ContentType::json())
         .header(Connection::close())
         .send()
+}
+
+
+#[derive(RustcDecodable)]
+struct CLIConfig {
+    puppetdb: Config,
+}
+
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::process;
+
+pub fn load_config(path: String) -> Config {
+    let mut f = File::open(&path).ok().expect("Couldn't open config file.");
+    let mut s = String::new();
+    f.read_to_string(&mut s).ok().expect("Couldn't read from config file.");
+    let cli_config: CLIConfig = match json::decode(&s) {
+        Ok(d) => d,
+        Err(e) => {
+            match writeln!(&mut io::stderr(), "Error response from server: {}", e) {
+                Ok(_) => {},
+                Err(x) => panic!("Unable to write to stderr: {}", x),
+            };
+            process::exit(1)
+        }
+    };
+    let mut config: Config = cli_config.puppetdb;
+    config.server_urls = if config.server_urls.len() > 0 {
+        config.server_urls
+    } else {
+        vec!["http://127.0.0.1:8080".to_string()]
+    };
+    config
 }

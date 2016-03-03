@@ -10,21 +10,23 @@ keywords = ["puppet", "puppetdb", "puppetdb-cli"]
 authors = ["Andrew Roetker <andrew.roetker@puppetlabs.com>"]
 
 [lib]
-name = "pdb"
+name = "puppetdb"
 path = "src/lib.rs"
 
 [[bin]]
-name = "puppet-pdb"
-path = "src/main.rs"
+name = "puppet-db"
+path = "src/db.rs"
 
+[[bin]]
+name = "puppet-query"
+path = "src/query.rs"
 
 [dependencies]
+beautician = "0.1.*"
 hyper = "0.7.*"
 docopt = "0.6.*"
 rustc-serialize = "0.3.*"
 url = "0.5.*"
-flate2 = "0.2.*"
-tar = "0.3.*"
 openssl = "0.7.*"
 
 [dependencies.multipart]
