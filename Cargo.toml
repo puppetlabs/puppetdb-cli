@@ -1,6 +1,6 @@
 [package]
 name = "rust-puppetdb-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "PuppetDB CLI tool in rust."
 readme = "README.md"
 documentation = "http://ajroetker.github.io/rust-puppetdb-cli/index.html"
@@ -30,6 +30,6 @@ url = "0.5.*"
 openssl = "0.7.*"
 
 [dependencies.multipart]
-version = "0.3.*"
+version = "0.4.*"
 default-features = false
 features = ["hyper", "client"]
