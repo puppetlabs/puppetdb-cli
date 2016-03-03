@@ -5,18 +5,21 @@ environment:
   matrix:
   - TARGET: i686-pc-windows-gnu
     BITS: 32
-
+  - TARGET: x86_64-pc-windows-msvc
+    BITS: 64
 install:
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2e.exe"
-  - Win%BITS%OpenSSL-1_0_2e.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
-  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.4.0-${env:TARGET}.exe" -FileName "rust-1.4.0.exe"
-  - ps: .\rust-1.4.0.exe /VERYSILENT /NORESTART /DIR="C:\rust" | Out-Null
-  - SET PATH=%PATH%;C:\rust\bin;C:\MinGW\bin
-  - rustc -vV
-  - cargo -vV
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2g.exe"
+  - Win%BITS%OpenSSL-1_0_2g.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-1.7.0-${env:TARGET}.exe"
+  - rust-1.7.0-%TARGET%.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
+  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
+  - SET PATH=%PATH%;C:\MinGW\bin
+  - rustc -V
+  - cargo -V
 
 build: false
 
+# Don't run doctests due to rust-lang/cargo#1592
 test_script:
-  - cargo build
-  - cargo test
+  - cargo build --verbose
+  - cargo test --verbose
