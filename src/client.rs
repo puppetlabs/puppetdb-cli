@@ -1,3 +1,5 @@
+use std::io::{self, Read, Write};
+use std::process;
 use hyper::Client;
 use hyper::header::{Connection,ContentType};
 use hyper::method::Method;
@@ -43,6 +45,35 @@ pub struct Config {
     pub cacert: String,
     pub cert: String,
     pub key: String,
+}
+
+fn parse_server_urls(urls: String) -> Vec<String> {
+    urls.split(",").map(|u| u.to_string() ).collect()
+}
+
+impl Config {
+    pub fn new(path: String,
+               urls: String,
+               cacert: String,
+               cert: String,
+               key: String) -> Config {
+       let mut config: Config =
+            if !urls.is_empty() && !cacert.is_empty() && !cert.is_empty() && !key.is_empty() {
+                Default::default()
+            } else {
+                match File::open(&path).ok() {
+                    Some(_) => load_config(path),
+                    None => panic!("Can't open config at {:?}", path),
+                }
+            };
+        if !urls.is_empty() {
+            config.server_urls = parse_server_urls(urls.clone())
+        };
+        if !cacert.is_empty() { config.cacert = cacert };
+        if !cert.is_empty() { config.cert = cert };
+        if !key.is_empty() { config.key = key };
+        config
+    }
 }
 
 impl Default for Config {
@@ -116,15 +147,21 @@ pub fn execute_query(config: Config, query_str: String) -> Result<Response,Error
         .send()
 }
 
+pub fn execute_status(config: Config) -> Result<Response,Error> {
+    let server_url: String = config.server_urls[0].clone();
 
-#[derive(RustcDecodable)]
+    client(config)
+        .get(&(server_url + "/status/v1/services"))
+        .header(Connection::close())
+        .send()
+}
+
+#[derive(RustcDecodable,Default)]
 struct CLIConfig {
     puppetdb: Config,
 }
 
 use std::fs::File;
-use std::io::{self, Read, Write};
-use std::process;
 
 pub fn load_config(path: String) -> Config {
     let mut f = File::open(&path).ok().expect("Couldn't open config file.");
@@ -133,7 +170,7 @@ pub fn load_config(path: String) -> Config {
     let cli_config: CLIConfig = match json::decode(&s) {
         Ok(d) => d,
         Err(e) => {
-            match writeln!(&mut io::stderr(), "Error response from server: {}", e) {
+            match writeln!(&mut io::stderr(), "Error parsing config {:?}: {}", path, e) {
                 Ok(_) => {},
                 Err(x) => panic!("Unable to write to stderr: {}", x),
             };
