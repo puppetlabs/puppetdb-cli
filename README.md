@@ -56,8 +56,8 @@ Using `rustc` and `cargo` (stable, beta, or nightly):
 The Rust PuppetDB CLI accepts a `--config=<path_to_config>` flag which allows
 you to configure your ssl credentials and the location of your PuppetDB.
 
-By default the tool will use `$HOME/.puppetlabs/client-tools/puppetdb.conf` as it's
-configuration file if it exists.
+By default the tool will use `$HOME/.puppetlabs/client-tools/puppetdb.conf` as
+it's configuration file if it exists.
 
 The format of the config file can be deduced from the following example.
 
@@ -78,6 +78,5 @@ The format of the config file can be deduced from the following example.
 
 ## TODO
 
-- [ ] Add failover for `server_urls`
 - [ ] Add `--log-level` and `--silent` options
 - [ ] Add testing for all the things

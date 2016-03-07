@@ -93,6 +93,12 @@ fn main() {
             let mut handle = stdout.lock();
             beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
         },
-        Err(e) => panic!("failed to connect to PuppetDB: {}", e),
+        Err(e) => {
+            match writeln!(&mut std::io::stderr(), "Failed to connect to PuppetDB: {}", e) {
+                Ok(_) => {},
+                Err(x) => panic!("Unable to write to stderr: {}", x),
+            };
+            process::exit(1)
+        },
     };
 }

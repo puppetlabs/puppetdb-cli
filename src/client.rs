@@ -130,21 +130,30 @@ pub fn execute_export(config: Config, anonymization: String) -> Result<Response,
 }
 
 pub fn execute_query(config: Config, query_str: String) -> Result<Response,Error> {
-    let server_url: String = config.server_urls[0].clone();
-    let query = if query_str.trim().starts_with("[") {
-        json::Json::from_str(&query_str).unwrap()
-    } else {
-        query_str.to_json()
-    };
-    let pdb_query = PdbRequest{query: query};
-    let pdb_query_str = json::encode(&pdb_query).unwrap().to_string();
+    // `fn client` moves the `config` so we copy the server_urls before moving
+    // the ownership of the config
+    let server_urls = config.server_urls.clone();
+    let cli: Client = client(config);
+    for server_url in server_urls {
+        let query = if query_str.trim().starts_with("[") {
+            json::Json::from_str(&query_str).unwrap()
+        } else {
+            query_str.to_json()
+        };
+        let pdb_query = PdbRequest{query: query};
+        let pdb_query_str = json::encode(&pdb_query).unwrap().to_string();
 
-    client(config)
-        .post(&(server_url + "/pdb/query/v4"))
-        .body(&pdb_query_str)
-        .header(ContentType::json())
-        .header(Connection::close())
-        .send()
+        let res = cli
+            .post(&(server_url + "/pdb/query/v4"))
+            .body(&pdb_query_str)
+            .header(ContentType::json())
+            .header(Connection::close())
+            .send();
+        if res.is_ok() {
+            return res;
+        }
+    };
+    return Err(Error::from(io::Error::new(io::ErrorKind::ConnectionRefused, "connection refused")));
 }
 
 pub fn execute_status(config: Config) -> Result<Response,Error> {
