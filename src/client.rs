@@ -47,8 +47,15 @@ pub struct Config {
     pub key: String,
 }
 
+
 fn parse_server_urls(urls: String) -> Vec<String> {
     urls.split(",").map(|u| u.to_string() ).collect()
+}
+
+#[test]
+fn parse_server_urls_works() {
+    assert_eq!(vec!["http://localhost:8080  ".to_string(), "http://foo.bar.baz:9190".to_string() ],
+               parse_server_urls("http://localhost:8080  ,http://foo.bar.baz:9190".to_string()))
 }
 
 impl Config {
