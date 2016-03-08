@@ -53,7 +53,8 @@ struct Args {
 use std::fs::File;
 use std::env;
 
-fn download_archive(res: utils::Result, path: String) {
+/// Copies the response body to a file with the given path.
+fn copy_response_to_file(res: utils::Result, path: String) {
     match res {
         Ok(mut response) => {
             utils::assert_status_ok(&mut response);
@@ -98,7 +99,7 @@ fn main() {
     if args.cmd_export {
         let path = args.arg_path;
         let res = admin::get_export(&config, args.flag_anon);
-        download_archive(res, path);
+        copy_response_to_file(res, path);
     } else if args.cmd_import {
         let path = args.arg_path;
         match admin::post_import(&config, path.clone()) {
@@ -110,6 +111,6 @@ fn main() {
         }
     } else if args.cmd_status {
         let resp = admin::get_status(&config);
-        utils::pretty_print_response(resp);
+        utils::prettify_response_to_stdout(resp);
     }
 }

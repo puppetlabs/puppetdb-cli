@@ -4,6 +4,7 @@ use std::io::{self, Read, Write};
 use std::process;
 use std::result;
 
+/// Like `println!` but for stderr.
 #[macro_export]
 macro_rules! println_stderr(
     ($($arg:tt)*) => (
@@ -14,6 +15,7 @@ macro_rules! println_stderr(
     )
 );
 
+/// Exits with an error if the response did not have status 200.
 pub fn assert_status_ok(response: &mut hyper::client::response::Response) {
     if response.status != hyper::Ok {
         let mut temp = String::new();
@@ -25,10 +27,12 @@ pub fn assert_status_ok(response: &mut hyper::client::response::Response) {
     }
 }
 
+/// Type alias for the result of a hyper HTTP request.
 pub type Result = result::Result<hyper::client::response::Response,
                                  hyper::error::Error>;
 
-pub fn pretty_print_response(res: Result) {
+/// Pretty prints the response body to stdout.
+pub fn prettify_response_to_stdout(res: Result) {
     match res {
         Ok(mut response) => {
             assert_status_ok(&mut response);

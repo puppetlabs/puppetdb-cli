@@ -49,6 +49,9 @@ pub struct Config {
     pub key: String,
 }
 
+/// Given a `home_dir` (e.g. from `std::env::home_dir()`), returns the default
+/// location of the client configuration file,
+/// `$HOME/.puppetlabs/client-tools/puppetdb.conf`.
 pub fn default_config_path(mut home_dir: PathBuf) -> String {
     home_dir.push(".puppetlabs");
     home_dir.push("client-tools");
@@ -85,7 +88,11 @@ pub struct PdbRequest {
     query: json::Json,
 }
 
+/// Struct to hold PuppetDB client configuration.
 impl Config {
+    /// Construct new client configuration, intended to be used with command
+    /// flags where `path` is the path to the config to load if any of the other
+    /// settings are empty.
     pub fn new(path: String,
                urls: String,
                cacert: String,

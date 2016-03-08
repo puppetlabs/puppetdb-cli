@@ -64,5 +64,5 @@ fn main() {
                                      args.flag_key);
     let query_str = args.arg_query.unwrap();
     let resp = config.query(query_str);
-    utils::pretty_print_response(resp);
+    utils::prettify_response_to_stdout(resp);
 }

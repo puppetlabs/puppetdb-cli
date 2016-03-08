@@ -12,6 +12,7 @@ use hyper::header::Connection;
 use super::client::{self, Config};
 use super::utils::Result;
 
+/// Construct a multipart request.
 fn multipart(config: &Config, url: Url) -> Multipart<Request<Streaming>> {
     let request =
         if !config.cacert.is_empty() {
@@ -25,6 +26,7 @@ fn multipart(config: &Config, url: Url) -> Multipart<Request<Streaming>> {
     Multipart::from_request(request).unwrap()
 }
 
+/// POSTs a multipart request to PuppetDB for importing an archive.
 pub fn post_import(config: &Config, path: String) -> Result {
     let server_url: String = config.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
