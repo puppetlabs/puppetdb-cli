@@ -8,6 +8,15 @@ use std::io::{self, Read, Write};
 use std::process;
 use docopt::Docopt;
 
+macro_rules! println_stderr(
+    ($($arg:tt)*) => (
+        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
+            Ok(_) => {},
+            Err(x) => panic!("Unable to write to stderr: {}", x),
+        }
+    )
+);
+
 const USAGE: &'static str = "
 puppet-db.
 
@@ -61,16 +70,8 @@ fn main() {
     }
 
     let path: String = if args.flag_config.is_empty() {
-        match env::home_dir() {
-            Some(mut conf_dir) => {
-                conf_dir.push(".puppetlabs");
-                conf_dir.push("client-tools");
-                conf_dir.push("puppetdb");
-                conf_dir.set_extension("conf");
-                conf_dir.to_str().unwrap().to_owned()
-            },
-            None => panic!("$HOME directory is not configured"),
-        }
+        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+        client::default_config_path(conf_dir)
     } else {
         args.flag_config
     };
@@ -82,79 +83,58 @@ fn main() {
                                      args.flag_key);
     if args.cmd_export {
         let path = args.arg_path;
-        match admin::execute_export(&config, args.flag_anon) {
+        match admin::get_export(&config, args.flag_anon) {
             Ok(mut response) => {
-                let status = response.status;
-                if status != hyper::Ok {
+                if response.status != hyper::Ok {
                     let mut temp = String::new();
-                    match response.read_to_string(&mut temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to read response from server: {}", x),
-                    };
-                    match writeln!(&mut std::io::stderr(), "Error response from server: {}", temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to write to stderr: {}", x),
-                    };
+                    if let Err(x) = response.read_to_string(&mut temp) {
+                        panic!("Unable to read response from server: {}", x);
+                    }
+                    println_stderr!("Error response from server: {}", temp);
                     process::exit(1)
                 };
                 match File::create(path.clone()) {
                     Ok(mut f) => {
-                        match io::copy(&mut response, &mut f) {
-                            Ok(_) => println!("Wrote archive to {:?}.", path),
-                            Err(e) => panic!("Error writing to archive: {}", e)
-                        };
+                        if let Err(e) = io::copy(&mut response, &mut f) {
+                            panic!("Error writing to archive: {}", e);
+                        }
+                        println!("Wrote archive to {:?}.", path)
                     },
                     Err(x) => panic!("Unable to create archive: {}", x),
                 };
             },
             Err(e) => {
-                match writeln!(&mut std::io::stderr(), "Failed to connect to PuppetDB: {}", e) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to write to stderr: {}", x),
-                };
+                println_stderr!("Failed to connect to PuppetDB: {}", e);
                 process::exit(1)
             },
         };
     } else if args.cmd_import {
         let path = args.arg_path;
-        match admin::execute_import(&config, path.clone()) {
+        match admin::post_import(&config, path.clone()) {
             Ok(mut response) => {
-                let status = response.status;
-                if status != hyper::Ok {
+                if response.status != hyper::Ok {
                     let mut temp = String::new();
-                    match response.read_to_string(&mut temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to read response from server: {}", x),
-                    };
-                    match writeln!(&mut std::io::stderr(), "Error response from server: {}", temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to write to stderr: {}", x),
-                    };
+                    if let Err(x) = response.read_to_string(&mut temp) {
+                        panic!("Unable to read response from server: {}", x);
+                    }
+                    println_stderr!("Error response from server: {}", temp);
                     process::exit(1)
                 };
             },
             Err(e) => {
-                match writeln!(&mut std::io::stderr(), "Failed to connect to PuppetDB: {}", e) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to write to stderr: {}", x),
-                };
+                println_stderr!("Failed to connect to PuppetDB: {}", e);
                 process::exit(1)
             },
         }
     } else if args.cmd_status {
-        match admin::execute_status(&config) {
+        match admin::get_status(&config) {
             Ok(mut response) => {
-                let status = response.status;
-                if status != hyper::Ok {
+                if response.status != hyper::Ok {
                     let mut temp = String::new();
-                    match response.read_to_string(&mut temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to read response from server: {}", x),
-                    };
-                    match writeln!(&mut std::io::stderr(), "Error response from server: {}", temp) {
-                        Ok(_) => {},
-                        Err(x) => panic!("Unable to write to stderr: {}", x),
-                    };
+                    if let Err(x) = response.read_to_string(&mut temp) {
+                        panic!("Unable to read response from server: {}", x);
+                    }
+                    println_stderr!("Error response from server: {}", temp);
                     process::exit(1)
                 }
 
@@ -163,10 +143,7 @@ fn main() {
                 beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
             },
             Err(e) => {
-                match writeln!(&mut std::io::stderr(), "Failed to connect to PuppetDB: {}", e) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to write to stderr: {}", x),
-                };
+                println_stderr!("Failed to connect to PuppetDB: {}", e);
                 process::exit(1)
             },
         };

@@ -1,20 +1,29 @@
+extern crate hyper;
 use std::io::{self, Read, Write};
 use std::process;
 use std::fs::File;
-use std::path::Path;
-use rustc_serialize::json::{self,ToJson};
+use std::path::{Path, PathBuf};
 
-use openssl::ssl::{SslContext,SslMethod};
+use rustc_serialize::json::{self, ToJson};
+
+use openssl::ssl::{SslContext, SslMethod};
 use openssl::ssl::error::SslError;
 use openssl::x509::X509FileType;
 
 use std::sync::Arc;
 
-use hyper::net::{Openssl,HttpsConnector};
+use hyper::net::{Openssl, HttpsConnector};
 use hyper::Client;
-use hyper::header::{Connection,ContentType};
-use hyper::client::response::Response;
-use hyper::error::Error;
+use hyper::header::{Connection, ContentType};
+
+macro_rules! println_stderr(
+    ($($arg:tt)*) => (
+        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
+            Ok(_) => {},
+            Err(x) => panic!("Unable to write to stderr: {}", x),
+        }
+    )
+);
 
 pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> Result<Openssl, SslError>
     where C: AsRef<Path> {
@@ -28,7 +37,13 @@ pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> Result<Openssl, SslError>
 
 pub fn ssl_connector<C>(cacert: C, cert: C, key: C) -> HttpsConnector<Openssl>
     where C: AsRef<Path> {
-    let ctx = ssl_context(cacert, cert, key).ok().expect("error opening certificate files");
+    let ctx = match ssl_context(cacert, cert, key) {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            println_stderr!("Error opening certificate files: {}", e);
+            process::exit(1)
+        }
+    };
     HttpsConnector::new(ctx)
 }
 
@@ -40,6 +55,17 @@ pub struct Config {
     pub key: String,
 }
 
+pub fn default_config_path(mut home_dir: PathBuf) -> String {
+    home_dir.push(".puppetlabs");
+    home_dir.push("client-tools");
+    home_dir.push("puppetdb");
+    home_dir.set_extension("conf");
+    home_dir.to_str().unwrap().to_owned()
+}
+
+fn default_server_urls() -> Vec<String> {
+    vec!["http://127.0.0.1:8080".to_string()]
+}
 
 fn parse_server_urls(urls: String) -> Vec<String> {
     urls.split(",").map(|u| u.to_string() ).collect()
@@ -47,8 +73,11 @@ fn parse_server_urls(urls: String) -> Vec<String> {
 
 #[test]
 fn parse_server_urls_works() {
-    assert_eq!(vec!["http://localhost:8080  ".to_string(), "http://foo.bar.baz:9190".to_string() ],
-               parse_server_urls("http://localhost:8080  ,http://foo.bar.baz:9190".to_string()))
+    assert_eq!(vec!["http://localhost:8080  ".to_string(),
+                    "http://foo.bar.baz:9190".to_string() ],
+               parse_server_urls(
+                   "http://localhost:8080  ,http://foo.bar.baz:9190".to_string()
+               ))
 }
 
 
@@ -62,6 +91,9 @@ pub struct PdbRequest {
     query: json::Json,
 }
 
+pub type Response = Result<hyper::client::response::Response,
+                           hyper::error::Error>;
+
 impl Config {
     pub fn new(path: String,
                urls: String,
@@ -69,13 +101,13 @@ impl Config {
                cert: String,
                key: String) -> Config {
        let mut config: Config =
-            if !urls.is_empty() && !cacert.is_empty() && !cert.is_empty() && !key.is_empty() {
+            // Do not bother loading the config if the user supplied all the
+            // config via flags
+            if !urls.is_empty()
+            && !cacert.is_empty() && !cert.is_empty() && !key.is_empty() {
                 Default::default()
             } else {
-                match File::open(&path).ok() {
-                    Some(_) => Config::load(path),
-                    None => panic!("Can't open config at {:?}", path),
-                }
+                Config::load(path)
             };
         if !urls.is_empty() {
             config.server_urls = parse_server_urls(urls.clone())
@@ -87,16 +119,22 @@ impl Config {
     }
 
     pub fn load(path: String) -> Config {
-        let mut f = File::open(&path).ok().expect("Couldn't open config file.");
+        let mut f = match File::open(&path) {
+            Ok(d) => d,
+            Err(e) => {
+                println_stderr!("Error opening config {:?}: {}", path, e);
+                process::exit(1)
+            }
+        };
         let mut s = String::new();
-        f.read_to_string(&mut s).ok().expect("Couldn't read from config file.");
+        if let Err(e) = f.read_to_string(&mut s) {
+            println_stderr!("Error reading from config {:?}: {}", path, e);
+            process::exit(1)
+        }
         let cli_config: CLIConfig = match json::decode(&s) {
             Ok(d) => d,
             Err(e) => {
-                match writeln!(&mut io::stderr(), "Error parsing config {:?}: {}", path, e) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to write to stderr: {}", x),
-                };
+                println_stderr!("Error parsing config {:?}: {}", path, e);
                 process::exit(1)
             }
         };
@@ -104,13 +142,13 @@ impl Config {
         config.server_urls = if config.server_urls.len() > 0 {
             config.server_urls
         } else {
-            vec!["http://127.0.0.1:8080".to_string()]
+            default_server_urls()
         };
         config
     }
 
     /// POSTs `query_str` (either AST or PQL) to configured PuppetDBs.
-    pub fn query(&self, query_str: String) -> Result<Response,Error> {
+    pub fn query(&self, query_str: String) -> Response {
         let cli: Client = client(self);
         for server_url in self.server_urls.clone() {
             let query = if query_str.trim().starts_with("[") {
@@ -131,17 +169,21 @@ impl Config {
                 return res;
             }
         };
-        return Err(Error::from(io::Error::new(io::ErrorKind::ConnectionRefused, "connection refused")));
+        // TODO Collect errors from each server and return them
+        let io_error = io::Error::new(
+            io::ErrorKind::ConnectionRefused, "connection refused"
+        );
+        return Err(hyper::error::Error::from(io_error));
     }
 }
 
 impl Default for Config {
     fn default() -> Config {
         Config {
-            server_urls: vec!["http://127.0.0.1:8080".to_string()],
-            cacert: "".to_string(),
-            cert: "".to_string(),
-            key: "".to_string(),
+            server_urls: default_server_urls(),
+            cacert: String::new(),
+            cert: String::new(),
+            key: String::new(),
         }
     }
 }

@@ -6,7 +6,20 @@ extern crate hyper;
 
 use std::io::{self, Read, Write};
 use std::process;
+use std::env;
+
+use puppetdb::client;
+
 use docopt::Docopt;
+
+macro_rules! println_stderr(
+    ($($arg:tt)*) => (
+        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
+            Ok(_) => {},
+            Err(x) => panic!("Unable to write to stderr: {}", x),
+        }
+    )
+);
 
 const USAGE: &'static str = "
 puppet-query.
@@ -25,8 +38,6 @@ Options:
   --key=<path>        Path to client private key for auth.
 ";
 
-use puppetdb::client;
-
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, RustcDecodable)]
@@ -40,7 +51,20 @@ struct Args {
     arg_query: Option<String>,
 }
 
-use std::env;
+fn pretty_print_response(mut response: hyper::client::response::Response) {
+    if response.status != hyper::Ok {
+        let mut temp = String::new();
+        if let Err(x) = response.read_to_string(&mut temp) {
+            panic!("Unable to read response from server: {}", x);
+        }
+        println_stderr!("Error response from server: {}", temp);
+        process::exit(1)
+    }
+
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
+}
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
@@ -51,18 +75,9 @@ fn main() {
         return;
     }
 
-
     let path = if args.flag_config.is_empty() {
-        match env::home_dir() {
-            Some(mut conf_dir) => {
-                conf_dir.push(".puppetlabs");
-                conf_dir.push("client-tools");
-                conf_dir.push("puppetdb");
-                conf_dir.set_extension("conf");
-                conf_dir.to_str().unwrap().to_owned()
-            },
-            None => panic!("$HOME directory is not configured"),
-        }
+        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+        client::default_config_path(conf_dir)
     } else {
         args.flag_config
     };
@@ -74,30 +89,9 @@ fn main() {
                                      args.flag_key);
     let query_str = args.arg_query.unwrap();
     match config.query(query_str) {
-        Ok(mut response) => {
-            let status = response.status;
-            if status != hyper::Ok {
-                let mut temp = String::new();
-                match response.read_to_string(&mut temp) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to read response from server: {}", x),
-                };
-                match writeln!(&mut std::io::stderr(), "Error response from server: {}", temp) {
-                    Ok(_) => {},
-                    Err(x) => panic!("Unable to write to stderr: {}", x),
-                };
-                process::exit(1)
-            }
-
-            let stdout = io::stdout();
-            let mut handle = stdout.lock();
-            beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
-        },
+        Ok(response) => pretty_print_response(response),
         Err(e) => {
-            match writeln!(&mut std::io::stderr(), "Failed to connect to PuppetDB: {}", e) {
-                Ok(_) => {},
-                Err(x) => panic!("Unable to write to stderr: {}", x),
-            };
+            println_stderr!("Failed to connect to PuppetDB: {}", e);
             process::exit(1)
         },
     };

@@ -1,3 +1,5 @@
+extern crate hyper;
+
 use std::path::Path;
 use multipart::client::Multipart;
 use url::Url;
@@ -5,8 +7,6 @@ use url::Url;
 use hyper::net::Streaming;
 use hyper::method::Method;
 use hyper::client::request::Request;
-use hyper::client::response::Response;
-use hyper::error::Error;
 use hyper::header::Connection;
 
 use super::client::*;
@@ -24,7 +24,7 @@ fn multipart(config: &Config, url: Url) -> Multipart<Request<Streaming>> {
     Multipart::from_request(request).unwrap()
 }
 
-pub fn execute_import(config: &Config, path: String) -> Result<Response,Error> {
+pub fn post_import(config: &Config, path: String) -> Response {
     let server_url: String = config.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
     let mut multipart = multipart(config, url);
@@ -32,7 +32,7 @@ pub fn execute_import(config: &Config, path: String) -> Result<Response,Error> {
     multipart.send()
 }
 
-pub fn execute_export(config: &Config, anonymization: String) -> Result<Response,Error> {
+pub fn get_export(config: &Config, anonymization: String) -> Response {
     let server_url: String = config.server_urls[0].clone();
     client(config)
         .get(&(server_url + "/pdb/admin/v1/archive"))
@@ -41,7 +41,7 @@ pub fn execute_export(config: &Config, anonymization: String) -> Result<Response
         .send()
 }
 
-pub fn execute_status(config: &Config) -> Result<Response,Error> {
+pub fn get_status(config: &Config) -> Response {
     let server_url: String = config.server_urls[0].clone();
     client(config)
         .get(&(server_url + "/status/v1/services"))
