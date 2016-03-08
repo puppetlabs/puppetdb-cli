@@ -10,22 +10,16 @@ use openssl::ssl::{SslContext, SslMethod};
 use openssl::ssl::error::SslError;
 use openssl::x509::X509FileType;
 
+use std::result;
 use std::sync::Arc;
 
 use hyper::net::{Openssl, HttpsConnector};
 use hyper::Client;
 use hyper::header::{Connection, ContentType};
 
-macro_rules! println_stderr(
-    ($($arg:tt)*) => (
-        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
-            Ok(_) => {},
-            Err(x) => panic!("Unable to write to stderr: {}", x),
-        }
-    )
-);
+use super::utils::Result;
 
-pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> Result<Openssl, SslError>
+pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> result::Result<Openssl, SslError>
     where C: AsRef<Path> {
     let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
     try!(ctx.set_cipher_list("DEFAULT"));
@@ -91,9 +85,6 @@ pub struct PdbRequest {
     query: json::Json,
 }
 
-pub type Response = Result<hyper::client::response::Response,
-                           hyper::error::Error>;
-
 impl Config {
     pub fn new(path: String,
                urls: String,
@@ -148,7 +139,7 @@ impl Config {
     }
 
     /// POSTs `query_str` (either AST or PQL) to configured PuppetDBs.
-    pub fn query(&self, query_str: String) -> Response {
+    pub fn query(&self, query_str: String) -> Result {
         let cli: Client = client(self);
         for server_url in self.server_urls.clone() {
             let query = if query_str.trim().starts_with("[") {

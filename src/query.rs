@@ -4,22 +4,12 @@ extern crate puppetdb;
 extern crate beautician;
 extern crate hyper;
 
-use std::io::{self, Read, Write};
-use std::process;
 use std::env;
 
 use puppetdb::client;
+use puppetdb::utils;
 
 use docopt::Docopt;
-
-macro_rules! println_stderr(
-    ($($arg:tt)*) => (
-        match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
-            Ok(_) => {},
-            Err(x) => panic!("Unable to write to stderr: {}", x),
-        }
-    )
-);
 
 const USAGE: &'static str = "
 puppet-query.
@@ -51,21 +41,6 @@ struct Args {
     arg_query: Option<String>,
 }
 
-fn pretty_print_response(mut response: hyper::client::response::Response) {
-    if response.status != hyper::Ok {
-        let mut temp = String::new();
-        if let Err(x) = response.read_to_string(&mut temp) {
-            panic!("Unable to read response from server: {}", x);
-        }
-        println_stderr!("Error response from server: {}", temp);
-        process::exit(1)
-    }
-
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
-}
-
 fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.decode())
@@ -88,11 +63,6 @@ fn main() {
                                      args.flag_cert,
                                      args.flag_key);
     let query_str = args.arg_query.unwrap();
-    match config.query(query_str) {
-        Ok(response) => pretty_print_response(response),
-        Err(e) => {
-            println_stderr!("Failed to connect to PuppetDB: {}", e);
-            process::exit(1)
-        },
-    };
+    let resp = config.query(query_str);
+    utils::pretty_print_response(resp);
 }
