@@ -6,3 +6,4 @@ extern crate rustc_serialize;
 extern crate openssl;
 
 pub mod client;
+pub mod admin;

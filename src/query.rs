@@ -73,7 +73,7 @@ fn main() {
                                      args.flag_cert,
                                      args.flag_key);
     let query_str = args.arg_query.unwrap();
-    match client::execute_query(config, query_str) {
+    match config.query(query_str) {
         Ok(mut response) => {
             let status = response.status;
             if status != hyper::Ok {

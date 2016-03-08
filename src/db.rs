@@ -29,6 +29,7 @@ Options:
 ";
 
 use puppetdb::client;
+use puppetdb::admin;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
@@ -81,7 +82,7 @@ fn main() {
                                      args.flag_key);
     if args.cmd_export {
         let path = args.arg_path;
-        match client::execute_export(config, args.flag_anon) {
+        match admin::execute_export(&config, args.flag_anon) {
             Ok(mut response) => {
                 let status = response.status;
                 if status != hyper::Ok {
@@ -116,7 +117,7 @@ fn main() {
         };
     } else if args.cmd_import {
         let path = args.arg_path;
-        match client::execute_import(config, path.clone()) {
+        match admin::execute_import(&config, path.clone()) {
             Ok(mut response) => {
                 let status = response.status;
                 if status != hyper::Ok {
@@ -141,7 +142,7 @@ fn main() {
             },
         }
     } else if args.cmd_status {
-        match client::execute_status(config) {
+        match admin::execute_status(&config) {
             Ok(mut response) => {
                 let status = response.status;
                 if status != hyper::Ok {
