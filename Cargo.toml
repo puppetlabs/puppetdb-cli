@@ -36,3 +36,6 @@ features = ["tlsv1_2"]
 version = "0.5.*"
 default-features = false
 features = ["hyper", "client"]
+
+[dev-dependencies]
+tempdir = "0.3"

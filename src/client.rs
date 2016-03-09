@@ -41,12 +41,12 @@ pub fn ssl_connector<C>(cacert: C, cert: C, key: C) -> HttpsConnector<Openssl>
     HttpsConnector::new(ctx)
 }
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, RustcEncodable)]
 pub struct Config {
     pub server_urls: Vec<String>,
-    pub cacert: String,
-    pub cert: String,
-    pub key: String,
+    pub cacert: Option<String>,
+    pub cert: Option<String>,
+    pub key: Option<String>
 }
 
 /// Given a `home_dir` (e.g. from `std::env::home_dir()`), returns the default
@@ -77,8 +77,8 @@ fn parse_server_urls_works() {
 }
 
 
-#[derive(RustcDecodable,Default)]
-struct CLIConfig {
+#[derive(RustcDecodable, RustcEncodable)]
+pub struct CLIConfig {
     puppetdb: Config,
 }
 
@@ -109,9 +109,9 @@ impl Config {
         if !urls.is_empty() {
             config.server_urls = parse_server_urls(urls.clone())
         };
-        if !cacert.is_empty() { config.cacert = cacert };
-        if !cert.is_empty() { config.cert = cert };
-        if !key.is_empty() { config.key = key };
+        if !cacert.is_empty() { config.cacert = Some(cacert) };
+        if !cert.is_empty() { config.cert = Some(cert) };
+        if !key.is_empty() { config.key = Some(key) };
         config
     }
 
@@ -131,7 +131,7 @@ impl Config {
         let cli_config: CLIConfig = match json::decode(&s) {
             Ok(d) => d,
             Err(e) => {
-                println_stderr!("Error parsing config {:?}: {}", path, e);
+                println_stderr!("Error parsing config ------> {:?}: {}", path, e);
                 process::exit(1)
             }
         };
@@ -174,24 +174,94 @@ impl Config {
     }
 }
 
+
+
 impl Default for Config {
     fn default() -> Config {
         Config {
             server_urls: default_server_urls(),
-            cacert: String::new(),
-            cert: String::new(),
-            key: String::new(),
+            cacert: None,
+            cert: None,
+            key: None
         }
     }
 }
 
 pub fn client(config: &Config) -> Client {
-    if !config.cacert.is_empty() {
-        let conn = ssl_connector(Path::new(&config.cacert),
-                                 Path::new(&config.cert),
-                                 Path::new(&config.key));
-        Client::with_connector(conn)
-    } else {
-        Client::new()
+    match config {
+        &Config{ cacert: Some(ref cacert),
+                 cert: Some(ref cert),
+                 key: Some(ref key), ..} => Client::with_connector(ssl_connector(Path::new(&cacert),
+                                                                                 Path::new(&cert),
+                                                                                 Path::new(&key))),
+        _ => Client::new()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::fs::File;       
+    use rustc_serialize::json;
+    use std::io::{Write,Error};
+    use std::path::{PathBuf};
+
+    extern crate tempdir;
+    use self::tempdir::*;
+
+    fn create_temp_path(temp_dir: &TempDir,file_name: &str) -> PathBuf {
+        temp_dir.path().join(file_name)
+    }
+
+    fn spit_config(file_path: &str, config: &CLIConfig) -> Result<(),Error> {
+        let mut f = try!(File::create(file_path));
+        try!(f.write_all(json::encode(config).unwrap().as_bytes()));
+        Ok(())
+    }
+
+    #[test]
+    fn load_test_all_fields(){
+        let config = CLIConfig { 
+            puppetdb: Config {
+                server_urls: vec!["http://foo".to_string()],
+                cacert: Some("foo".to_string()),
+                cert: Some("bar".to_string()),
+                key: Some("baz".to_string())
+            }
+        };
+
+        let temp_dir= TempDir::new_in("target","test-").unwrap();
+        let temp_path = create_temp_path(&temp_dir, "testfile.json");
+        let path_str = temp_path.as_path().to_str().unwrap();
+
+        spit_config(path_str, &config).unwrap();
+        let slurped_config = Config::load(path_str.to_string());
+
+        assert_eq!(config.puppetdb.server_urls[0], slurped_config.server_urls[0]);
+        assert_eq!(config.puppetdb.cacert, slurped_config.cacert);
+        assert_eq!(config.puppetdb.cert, slurped_config.cert);
+        assert_eq!(config.puppetdb.key, slurped_config.key)
+    }
+
+    fn spit_string(file_path: &str, contents: &str) -> Result<(),Error> {
+        let mut f = try!(File::create(file_path));
+        try!(f.write_all(contents.as_bytes()));
+        Ok(())
+    }
+
+    #[test]
+    fn load_test_only_urls(){
+
+        let temp_dir = TempDir::new_in("target","test-").unwrap();
+        let temp_path= create_temp_path(&temp_dir, "testfile.json");
+        let path_str = temp_path.as_path().to_str().unwrap();
+
+        spit_string(&path_str, "{\"puppetdb\":{\"server_urls\":[\"http://foo\"]}}").unwrap();
+        let slurped_config = Config::load(path_str.to_string());
+
+        assert_eq!("http://foo", slurped_config.server_urls[0]);
+        assert_eq!(None, slurped_config.cacert);
+        assert_eq!(None, slurped_config.cert);
+        assert_eq!(None, slurped_config.key);
     }
 }

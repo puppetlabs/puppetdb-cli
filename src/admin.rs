@@ -14,15 +14,14 @@ use super::utils::Result;
 
 /// Construct a multipart request.
 fn multipart(config: &Config, url: Url) -> Multipart<Request<Streaming>> {
-    let request =
-        if !config.cacert.is_empty() {
-            let conn = client::ssl_connector(Path::new(&config.cacert),
-                                             Path::new(&config.cert),
-                                             Path::new(&config.key));
-            Request::with_connector(Method::Post, url, &conn).unwrap()
-        } else {
-            Request::new(Method::Post, url).unwrap()
-        };
+    let request = match config {
+        &Config { cacert: Some(ref cacert),
+                  cert: Some(ref cert),
+                  key: Some(ref key), ..} => Request::with_connector(Method::Post, url, &client::ssl_connector(Path::new(&cacert),
+                                                                                                               Path::new(&cert),
+                                                                                                               Path::new(&key))).unwrap(),
+        &Config {..} => Request::new(Method::Post, url).unwrap()
+    };
     Multipart::from_request(request).unwrap()
 }
 
