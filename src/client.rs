@@ -21,8 +21,8 @@ use super::utils::Result;
 
 pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> result::Result<Openssl, SslError>
     where C: AsRef<Path> {
-    let mut ctx = SslContext::new(SslMethod::Sslv23).unwrap();
-    try!(ctx.set_cipher_list("DEFAULT"));
+    let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
+    try!(ctx.set_cipher_list("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"));
     try!(ctx.set_CA_file(cacert.as_ref()));
     try!(ctx.set_certificate_file(cert.as_ref(), X509FileType::PEM));
     try!(ctx.set_private_key_file(key.as_ref(), X509FileType::PEM));
@@ -65,7 +65,7 @@ fn default_server_urls() -> Vec<String> {
 }
 
 fn parse_server_urls(urls: String) -> Vec<String> {
-    urls.split(",").map(|u| u.to_string() ).collect()
+    urls.split(",").map(|u| u.to_string()).collect()
 }
 
 #[test]
@@ -73,8 +73,7 @@ fn parse_server_urls_works() {
     assert_eq!(vec!["http://localhost:8080  ".to_string(),
                     "http://foo.bar.baz:9190".to_string() ],
                parse_server_urls(
-                   "http://localhost:8080  ,http://foo.bar.baz:9190".to_string()
-               ))
+                   "http://localhost:8080  ,http://foo.bar.baz:9190".to_string()))
 }
 
 

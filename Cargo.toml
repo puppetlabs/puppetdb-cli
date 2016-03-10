@@ -27,7 +27,10 @@ hyper = "0.7.*"
 docopt = "0.6.*"
 rustc-serialize = "0.3.*"
 url = "0.5.*"
-openssl = "0.7.*"
+
+[dependencies.openssl]
+version = "0.7.*"
+features = ["tlsv1_2"]
 
 [dependencies.multipart]
 version = "0.4.*"
