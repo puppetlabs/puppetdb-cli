@@ -8,6 +8,7 @@ use std::env;
 
 use puppetdb::client;
 use puppetdb::utils;
+use puppetdb::config;
 
 use docopt::Docopt;
 
@@ -33,11 +34,11 @@ const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 #[derive(Debug, RustcDecodable)]
 struct Args {
     flag_version: bool,
-    flag_config: String,
-    flag_urls: String,
-    flag_cacert: String,
-    flag_cert: String,
-    flag_key: String,
+    flag_config: Option<String>,
+    flag_urls: Option<String>,
+    flag_cacert: Option<String>,
+    flag_cert: Option<String>,
+    flag_key: Option<String>,
     arg_query: Option<String>,
 }
 
@@ -50,19 +51,21 @@ fn main() {
         return;
     }
 
-    let path = if args.flag_config.is_empty() {
-        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
-        client::default_config_path(conf_dir)
+    let path = if let Some(cfg_path) = args.flag_config {
+        cfg_path
     } else {
-        args.flag_config
+        let conf_dir = env::home_dir()
+            .expect("$HOME directory is not configured");
+        config::default_config_path(conf_dir)
     };
 
-    let config = client::Config::new(path,
-                                     args.flag_urls,
-                                     args.flag_cacert,
-                                     args.flag_cert,
-                                     args.flag_key);
+    let config = config::Config::load(path,
+                                      args.flag_urls,
+                                      args.flag_cacert,
+                                      args.flag_cert,
+                                      args.flag_key);
+    let client = client::PdbClient::new(config);
     let query_str = args.arg_query.unwrap();
-    let resp = config.query(query_str);
+    let resp = client::post_query(&client, query_str);
     utils::prettify_response_to_stdout(resp);
 }

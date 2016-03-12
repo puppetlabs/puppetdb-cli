@@ -30,6 +30,7 @@ Options:
 ";
 
 use puppetdb::client;
+use puppetdb::config;
 use puppetdb::admin;
 use puppetdb::utils;
 
@@ -39,11 +40,11 @@ const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 struct Args {
     flag_version: bool,
     flag_anon: String,
-    flag_config: String,
-    flag_urls: String,
-    flag_cacert: String,
-    flag_cert: String,
-    flag_key: String,
+    flag_config: Option<String>,
+    flag_urls: Option<String>,
+    flag_cacert: Option<String>,
+    flag_cert: Option<String>,
+    flag_key: Option<String>,
     arg_path: String,
     cmd_import: bool,
     cmd_export: bool,
@@ -84,25 +85,27 @@ fn main() {
         return;
     }
 
-    let path: String = if args.flag_config.is_empty() {
-        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
-        client::default_config_path(conf_dir)
+    let path = if let Some(cfg_path) = args.flag_config {
+        cfg_path
     } else {
-        args.flag_config
+        let conf_dir = env::home_dir()
+            .expect("$HOME directory is not configured");
+        config::default_config_path(conf_dir)
     };
 
-    let config = client::Config::new(path,
-                                     args.flag_urls,
-                                     args.flag_cacert,
-                                     args.flag_cert,
-                                     args.flag_key);
+    let config = config::Config::load(path,
+                                      args.flag_urls,
+                                      args.flag_cacert,
+                                      args.flag_cert,
+                                      args.flag_key);
+    let client = client::PdbClient::new(config);
     if args.cmd_export {
         let path = args.arg_path;
-        let res = admin::get_export(&config, args.flag_anon);
+        let res = admin::get_export(&client, args.flag_anon);
         copy_response_to_file(res, path);
     } else if args.cmd_import {
         let path = args.arg_path;
-        match admin::post_import(&config, path.clone()) {
+        match admin::post_import(&client, path.clone()) {
             Ok(mut response) => utils::assert_status_ok(&mut response),
             Err(e) => {
                 println_stderr!("Failed to connect to PuppetDB: {}", e);
@@ -110,7 +113,7 @@ fn main() {
             },
         }
     } else if args.cmd_status {
-        let resp = admin::get_status(&config);
+        let resp = admin::get_status(&client);
         utils::prettify_response_to_stdout(resp);
     }
 }
