@@ -28,8 +28,7 @@ pub fn assert_status_ok(response: &mut hyper::client::response::Response) {
 }
 
 /// Type alias for the result of a hyper HTTP request.
-pub type Result = result::Result<hyper::client::response::Response,
-                                 hyper::error::Error>;
+pub type Result = result::Result<hyper::client::response::Response, hyper::error::Error>;
 
 /// Pretty prints the response body to stdout.
 pub fn prettify_response_to_stdout(res: Result) {
@@ -38,12 +37,13 @@ pub fn prettify_response_to_stdout(res: Result) {
             assert_status_ok(&mut response);
             let stdout = io::stdout();
             let mut handle = stdout.lock();
-            beautician::prettify(&mut response, &mut handle).ok().expect("failed to write response");
-        },
+            beautician::prettify(&mut response, &mut handle)
+                .ok()
+                .expect("failed to write response");
+        }
         Err(e) => {
             println_stderr!("Failed to connect to PuppetDB: {}", e);
             process::exit(1)
-        },
+        }
     };
 }
-

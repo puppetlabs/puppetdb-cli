@@ -34,9 +34,8 @@ pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> Result {
 pub fn get_status(pdb_client: &PdbClient) -> Result {
     let server_url: String = pdb_client.server_urls[0].clone();
     let cli = Auth::client(&pdb_client.auth);
-    let mut req = cli
-        .post(&(server_url + "/status/v1/services"))
-        .header(Connection::close());
+    let mut req = cli.get(&(server_url + "/status/v1/services"))
+                     .header(Connection::close());
     if let Some(auth) = Auth::auth_header(&pdb_client.auth) {
         req = req.header(auth)
     };

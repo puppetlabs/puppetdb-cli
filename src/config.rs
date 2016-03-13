@@ -22,9 +22,9 @@ fn parse_server_urls(urls: String) -> Vec<String> {
 
 #[test]
 fn parse_server_urls_works() {
-    assert_eq!(vec!["http://localhost:8080".to_string(),
-                    "http://foo.bar.baz:9190".to_string() ],
-               parse_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190".to_string()))
+    assert_eq!(vec!["http://localhost:8080".to_string(), "http://foo.bar.baz:9190".to_string()],
+               parse_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190"
+                                     .to_string()))
 }
 
 #[derive(RustcDecodable,Clone)]
@@ -41,7 +41,8 @@ impl Config {
                 urls: Option<String>,
                 cacert: Option<String>,
                 cert: Option<String>,
-                key: Option<String>) -> Config {
+                key: Option<String>)
+                -> Config {
 
         if urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
             return Config {
@@ -65,12 +66,26 @@ impl Config {
 
         // TODO Add tests for Config parsing edge cases
         Config {
-            server_urls:
-            if let Some(urls) = urls { parse_server_urls(urls) }
-            else { cfg_urls.unwrap() },
-            cacert: if cacert.is_some() { cacert } else { cfg_cacert },
-            cert: if cert.is_some() { cert } else { cfg_cert },
-            key: if key.is_some() { key } else { cfg_key },
+            server_urls: if let Some(urls) = urls {
+                parse_server_urls(urls)
+            } else {
+                cfg_urls.unwrap()
+            },
+            cacert: if cacert.is_some() {
+                cacert
+            } else {
+                cfg_cacert
+            },
+            cert: if cert.is_some() {
+                cert
+            } else {
+                cfg_cert
+            },
+            key: if key.is_some() {
+                key
+            } else {
+                cfg_key
+            },
             token: None,
         }
     }
@@ -103,9 +118,7 @@ struct CLIConfig {
 impl CLIConfig {
     fn load(path: String) -> CLIConfig {
         if !Path::new(&path).exists() {
-            return CLIConfig {
-                puppetdb: Some(default_pdb_config_section())
-            };
+            return CLIConfig { puppetdb: Some(default_pdb_config_section()) };
         }
         let mut f = match File::open(&path) {
             Ok(d) => d,

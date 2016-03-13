@@ -44,8 +44,8 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+                         .and_then(|d| d.decode())
+                         .unwrap_or_else(|e| e.exit());
     if args.flag_version {
         println!("puppet-query v{}", VERSION.unwrap_or("unknown"));
         return;
@@ -54,8 +54,7 @@ fn main() {
     let path = if let Some(cfg_path) = args.flag_config {
         cfg_path
     } else {
-        let conf_dir = env::home_dir()
-            .expect("$HOME directory is not configured");
+        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
         config::default_config_path(conf_dir)
     };
 

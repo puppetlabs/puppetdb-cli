@@ -17,8 +17,12 @@ use hyper::client::request::Request;
 use multipart::client::Multipart;
 use url::Url;
 
-pub fn ssl_context<C>(cacert: C, cert: Option<C>, key: Option<C>) -> result::Result<Openssl, SslError>
-    where C: AsRef<Path> {
+pub fn ssl_context<C>(cacert: C,
+                      cert: Option<C>,
+                      key: Option<C>)
+                      -> result::Result<Openssl, SslError>
+    where C: AsRef<Path>
+{
     let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
     try!(ctx.set_cipher_list("DEFAULT"));
     try!(ctx.set_CA_file(cacert.as_ref()));
@@ -34,7 +38,8 @@ pub fn ssl_context<C>(cacert: C, cert: Option<C>, key: Option<C>) -> result::Res
 }
 
 pub fn ssl_connector<C>(cacert: C, cert: Option<C>, key: Option<C>) -> HttpsConnector<Openssl>
-    where C: AsRef<Path> {
+    where C: AsRef<Path>
+{
     let ctx = match ssl_context(cacert, cert, key) {
         Ok(ctx) => ctx,
         Err(e) => {
@@ -56,7 +61,7 @@ pub enum Auth {
     NoAuth,
     TokenAuth {
         cacert: String,
-        token: String
+        token: String,
     },
 }
 
@@ -68,11 +73,11 @@ impl Auth {
                                          Some(Path::new(cert)),
                                          Some(Path::new(key)));
                 Client::with_connector(conn)
-            },
+            }
             &Auth::TokenAuth{ref cacert, ..} => {
                 let conn = ssl_connector(Path::new(cacert), None, None);
                 Client::with_connector(conn)
-            },
+            }
             &Auth::NoAuth => Client::new(),
         }
     }
@@ -83,11 +88,11 @@ impl Auth {
                                          Some(Path::new(cert)),
                                          Some(Path::new(key)));
                 Request::with_connector(Method::Post, url, &conn).unwrap()
-            },
+            }
             &Auth::TokenAuth{ref cacert, ..} => {
                 let conn = ssl_connector(Path::new(cacert), None, None);
                 Request::with_connector(Method::Post, url, &conn).unwrap()
-            },
+            }
             &Auth::NoAuth => Request::new(Method::Post, url).unwrap(),
         };
 
@@ -96,9 +101,7 @@ impl Auth {
 
     pub fn auth_header(&self) -> Option<XAuthentication> {
         match self {
-            &Auth::TokenAuth{ ref token, .. } => {
-                Some(XAuthentication(token.clone()))
-            },
+            &Auth::TokenAuth{ ref token, .. } => Some(XAuthentication(token.clone())),
             _ => None,
         }
     }

@@ -65,21 +65,21 @@ fn copy_response_to_file(res: utils::Result, path: String) {
                         panic!("Error writing to archive: {}", e);
                     }
                     println!("Wrote archive to {:?}.", path)
-                },
+                }
                 Err(x) => panic!("Unable to create archive: {}", x),
             };
-        },
+        }
         Err(e) => {
             println_stderr!("Failed to connect to PuppetDB: {}", e);
             process::exit(1)
-        },
+        }
     };
 }
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+                         .and_then(|d| d.decode())
+                         .unwrap_or_else(|e| e.exit());
     if args.flag_version {
         println!("puppet-db v{}", VERSION.unwrap_or("unknown"));
         return;
@@ -88,8 +88,7 @@ fn main() {
     let path = if let Some(cfg_path) = args.flag_config {
         cfg_path
     } else {
-        let conf_dir = env::home_dir()
-            .expect("$HOME directory is not configured");
+        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
         config::default_config_path(conf_dir)
     };
 
@@ -110,7 +109,7 @@ fn main() {
             Err(e) => {
                 println_stderr!("Failed to connect to PuppetDB: {}", e);
                 process::exit(1)
-            },
+            }
         }
     } else if args.cmd_status {
         let resp = admin::get_status(&client);
