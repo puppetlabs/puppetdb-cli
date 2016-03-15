@@ -19,7 +19,7 @@ namespace logging = leatherman::logging;
 void
 help(po::options_description& global_desc, ostream& os)
 {
-    os << "usage: puppet-query [global] query <query>\n\n"
+    os << "usage: puppet-query [global] <query>\n\n"
        << global_desc << endl;
 }
 
