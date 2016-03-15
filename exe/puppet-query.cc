@@ -91,6 +91,16 @@ main(int argc, char **argv) {
             return EXIT_FAILURE;
         }
 
+        const auto query = vm["query"].as<string>();
+
+        if (query.empty()) {
+          logging::colorize(nowide::cerr, logging::log_level::error);
+          nowide::cerr << "Failed due to missing query argument" << endl << endl;
+          logging::colorize(nowide::cerr);
+          help(global_options, nowide::cerr);
+          return EXIT_FAILURE;
+        }
+
         // Get the logging level
         const auto lvl = vm["log-level"].as<logging::log_level>();
         logging::set_level(lvl);
@@ -103,7 +113,7 @@ main(int argc, char **argv) {
             vm["config"].as<string>(),
             vm["urls"].as<string>(),
             ssl_creds);
-        const auto query = vm["query"].as<string>();
+
         puppetdb::pdb_query(pdb_conn, query);
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
