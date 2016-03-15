@@ -160,7 +160,7 @@ size_t write_body(char *ptr, size_t size, size_t nmemb, void *userdata){
 }
 
 string
-convert_query_to_post_data(const string& query_str) {
+convert_query_to_post_data(const string& query_str, const bool& is_pretty) {
     // If this is PQL then we need to wrap the query in double-quotes, otherwise
     // the query is AST and we leave it alone
     rapidjson::StringBuffer s;
@@ -179,19 +179,23 @@ convert_query_to_post_data(const string& query_str) {
         writer.String(query_str.c_str());
     }
 
+    writer.String("pretty");
+    writer.Bool(is_pretty);
     writer.EndObject();
+
     return s.GetString();
 }
 
 void
 pdb_query(const PuppetDBConn& conn,
-          const string& query_str) {
+          const string& query_str,
+          const bool& is_pretty) {
     auto curl = conn.getCurlHandle();
     const auto server_url = conn.getServerUrl() + "/pdb/query/v4";
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, server_url.c_str());
 
-    const string post_data = convert_query_to_post_data(query_str);
+    const string post_data = convert_query_to_post_data(query_str, is_pretty);
     curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, post_data.c_str());
     auto headers = unique_ptr<curl_slist, function<void(curl_slist*)> >(NULL, curl_slist_free_all);
     curl_easy_setopt(curl.get(),

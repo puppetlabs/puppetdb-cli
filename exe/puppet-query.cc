@@ -46,6 +46,7 @@ main(int argc, char **argv) {
                  "client cert to use for curl")
                 ("key", po::value<string>()->default_value(""),
                  "client private key to use for curl")
+                ("no-pretty", "disable pretty printing of responses (default is enabled)")
                 ("log-level,l",
                  po::value<logging::log_level>()->default_value(logging::log_level::warning,
                                                                 "warn"),
@@ -114,7 +115,7 @@ main(int argc, char **argv) {
             vm["urls"].as<string>(),
             ssl_creds);
 
-        puppetdb::pdb_query(pdb_conn, query);
+        puppetdb::pdb_query(pdb_conn, query, vm.count("no-pretty") ? false : true);
     } catch (exception& ex) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "unhandled exception: " << ex.what() << "\n" << endl;
