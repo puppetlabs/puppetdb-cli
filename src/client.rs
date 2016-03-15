@@ -1,6 +1,4 @@
 use std::io::{self, Write};
-use std::process;
-use std::result;
 
 use rustc_serialize::json::{self, ToJson};
 
@@ -10,7 +8,7 @@ use hyper::header::{Connection, ContentType};
 use url::Url;
 
 use super::config::Config;
-use super::utils::Result;
+use super::utils::HyperResult;
 use super::net::Auth;
 
 pub struct PdbClient {
@@ -26,10 +24,7 @@ impl PdbClient {
                            .map(|url: String| {
                                match Url::parse(&url) {
                                    Ok(u) => u.scheme,
-                                   Err(e) => {
-                                       println_stderr!("Error parsing url {:?}: {}", url, e);
-                                       process::exit(1)
-                                   }
+                                   Err(e) => pretty_panic!("Error parsing url {:?}: {}", url, e),
                                }
                            })
                            .find(|s| s == "https");
@@ -42,21 +37,18 @@ impl PdbClient {
 
         match result {
             Ok(pdb_client) => pdb_client,
-            Err(e) => {
-                println_stderr!("Error: {}", e);
-                process::exit(1)
-            }
+            Err(e) => pretty_panic!("Error: {}", e),
         }
     }
 
-    pub fn without_auth(config: Config) -> result::Result<PdbClient, io::Error> {
+    pub fn without_auth(config: Config) -> Result<PdbClient, io::Error> {
         Ok(PdbClient {
             server_urls: config.server_urls,
             auth: Auth::NoAuth,
         })
     }
 
-    pub fn with_auth(config: Config) -> result::Result<PdbClient, io::Error> {
+    pub fn with_auth(config: Config) -> Result<PdbClient, io::Error> {
         if config.cacert.is_none() {
             return Err(io::Error::new(io::ErrorKind::InvalidData,
                                       "ssl requires 'cacert' to be set"));
@@ -193,7 +185,7 @@ fn query_to_json_works() {
 
 
 /// POSTs `query_str` (either AST or PQL) to configured PuppetDBs.
-pub fn post_query(pdb_client: &PdbClient, query_str: String) -> Result {
+pub fn post_query(pdb_client: &PdbClient, query_str: String) -> HyperResult {
 
     let cli = Auth::client(&pdb_client.auth);
 

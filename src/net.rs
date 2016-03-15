@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::process;
 use std::path::Path;
 
 use openssl::ssl::{SslContext, SslMethod};
@@ -42,10 +41,7 @@ pub fn ssl_connector<C>(cacert: C, cert: Option<C>, key: Option<C>) -> HttpsConn
 {
     let ctx = match ssl_context(cacert, cert, key) {
         Ok(ctx) => ctx,
-        Err(e) => {
-            println_stderr!("Error opening certificate files: {}", e);
-            process::exit(1)
-        }
+        Err(e) => pretty_panic!("Error opening certificate files: {}", e),
     };
     HttpsConnector::new(ctx)
 }

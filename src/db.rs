@@ -1,12 +1,10 @@
 extern crate rustc_serialize;
 extern crate docopt;
-#[macro_use(println_stderr)]
+#[macro_use(pretty_panic)]
 extern crate puppetdb;
-extern crate beautician;
 extern crate hyper;
 
-use std::io::{self, Write};
-use std::process;
+use std::io;
 use docopt::Docopt;
 
 const USAGE: &'static str = "
@@ -55,24 +53,16 @@ use std::fs::File;
 use std::env;
 
 /// Copies the response body to a file with the given path.
-fn copy_response_to_file(res: utils::Result, path: String) {
-    match res {
-        Ok(mut response) => {
-            utils::assert_status_ok(&mut response);
-            match File::create(path.clone()) {
-                Ok(mut f) => {
-                    if let Err(e) = io::copy(&mut response, &mut f) {
-                        panic!("Error writing to archive: {}", e);
-                    }
-                    println!("Wrote archive to {:?}.", path)
-                }
-                Err(x) => panic!("Unable to create archive: {}", x),
-            };
+fn copy_response_to_file(res: utils::HyperResult, path: String) {
+    let mut response = utils::assert_connected(res);
+    utils::assert_status_ok(&mut response);
+    match File::create(path.clone()) {
+        Ok(mut f) => {
+            io::copy(&mut response, &mut f)
+                .unwrap_or_else(|e| panic!("Error writing to archive: {}", e));
+            println!("Wrote archive to {:?}.", path)
         }
-        Err(e) => {
-            println_stderr!("Failed to connect to PuppetDB: {}", e);
-            process::exit(1)
-        }
+        Err(x) => panic!("Unable to create archive: {}", x),
     };
 }
 
@@ -104,13 +94,9 @@ fn main() {
         copy_response_to_file(res, path);
     } else if args.cmd_import {
         let path = args.arg_path;
-        match admin::post_import(&client, path.clone()) {
-            Ok(mut response) => utils::assert_status_ok(&mut response),
-            Err(e) => {
-                println_stderr!("Failed to connect to PuppetDB: {}", e);
-                process::exit(1)
-            }
-        }
+        let res = admin::post_import(&client, path.clone());
+        let mut response = utils::assert_connected(res);
+        utils::assert_status_ok(&mut response);
     } else if args.cmd_status {
         admin::get_status(&client);
     }

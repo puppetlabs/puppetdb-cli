@@ -5,6 +5,7 @@ extern crate beautician;
 extern crate hyper;
 
 use std::env;
+use std::io;
 
 use puppetdb::client;
 use puppetdb::utils;
@@ -66,5 +67,12 @@ fn main() {
     let client = client::PdbClient::new(config);
     let query_str = args.arg_query.unwrap();
     let resp = client::post_query(&client, query_str);
-    utils::prettify_response_to_stdout(resp);
+    let mut response = utils::assert_connected(resp);
+    utils::assert_status_ok(&mut response);
+
+    let stdout = io::stdout();
+    let mut handle = stdout.lock();
+    beautician::prettify(&mut response, &mut handle)
+        .ok()
+        .expect("failed to write response");
 }

@@ -1,18 +1,21 @@
-extern crate hyper;
-
 use multipart::client::Multipart;
 use url::Url;
 
+use hyper;
 use hyper::net::Streaming;
 use hyper::client::request::Request;
 use hyper::header::Connection;
 
+use std::collections::BTreeMap;
+use std::io::Read;
+use rustc_serialize::json::{self, ToJson};
+
 use super::client::PdbClient;
 use super::net::Auth;
-use super::utils::Result;
+use super::utils::HyperResult;
 
 /// POSTs a multipart request to PuppetDB for importing an archive.
-pub fn post_import(pdb_client: &PdbClient, path: String) -> Result {
+pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
     // Import and export are not prepared to use token auth
     let server_url: String = pdb_client.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
@@ -21,7 +24,7 @@ pub fn post_import(pdb_client: &PdbClient, path: String) -> Result {
     multipart.send()
 }
 
-pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> Result {
+pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> HyperResult {
     // Import and export are not prepared to use token auth
     let server_url: String = pdb_client.server_urls[0].clone();
     Auth::client(&pdb_client.auth)
@@ -31,17 +34,13 @@ pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> Result {
         .send()
 }
 
-use std::collections::BTreeMap;
-use std::io::Read;
-use rustc_serialize::json::{self, ToJson};
-
 fn build_status_error_json(e: String) -> json::Json {
     let mut error_map = BTreeMap::new();
     error_map.insert("error".to_string(), e.to_json());
     json::Json::Object(error_map)
 }
 
-fn build_status_json(resp: Result) -> json::Json {
+fn build_status_json(resp: HyperResult) -> json::Json {
     match resp {
         Ok(mut r) => {
             match r.status {

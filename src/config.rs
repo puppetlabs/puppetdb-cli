@@ -1,5 +1,4 @@
 use std::io::{Read, Write};
-use std::process;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -122,22 +121,15 @@ impl CLIConfig {
         }
         let mut f = match File::open(&path) {
             Ok(d) => d,
-            Err(e) => {
-                println_stderr!("Error opening config {:?}: {}", path, e);
-                process::exit(1)
-            }
+            Err(e) => pretty_panic!("Error opening config {:?}: {}", path, e),
         };
         let mut s = String::new();
         if let Err(e) = f.read_to_string(&mut s) {
-            println_stderr!("Error reading from config {:?}: {}", path, e);
-            process::exit(1)
+            pretty_panic!("Error reading from config {:?}: {}", path, e)
         }
         match json::decode(&s) {
             Ok(d) => d,
-            Err(e) => {
-                println_stderr!("Error parsing config {:?}: {}", path, e);
-                process::exit(1)
-            }
+            Err(e) => pretty_panic!("Error parsing config {:?}: {}", path, e),
         }
     }
 }
