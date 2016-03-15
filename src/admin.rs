@@ -31,13 +31,57 @@ pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> Result {
         .send()
 }
 
-pub fn get_status(pdb_client: &PdbClient) -> Result {
-    let server_url: String = pdb_client.server_urls[0].clone();
+use std::collections::BTreeMap;
+use std::io::Read;
+use rustc_serialize::json::{self, ToJson};
+
+fn build_status_error_json(e: String) -> json::Json {
+    let mut error_map = BTreeMap::new();
+    error_map.insert("error".to_string(), e.to_json());
+    json::Json::Object(error_map)
+}
+
+fn build_status_json(resp: Result) -> json::Json {
+    match resp {
+        Ok(mut r) => {
+            match r.status {
+                hyper::Ok => {
+                    let mut b = json::Builder::new(r.bytes().map(|c| c.unwrap() as char));
+                    match b.build() {
+                        Ok(r) => r,
+                        Err(e) => {
+                            let msg = format!("Unable to build JSON object from server: {}", e);
+                            build_status_error_json(msg)
+                        }
+                    }
+                }
+                _ => {
+                    let mut temp = String::new();
+                    let msg = match r.read_to_string(&mut temp) {
+                        Err(x) => format!("Unable to read response from server: {}", x),
+                        _ => temp,
+                    };
+                    build_status_error_json(msg)
+                }
+            }
+        }
+        Err(e) => build_status_error_json(e.to_string()),
+    }
+}
+
+pub fn get_status(pdb_client: &PdbClient) {
+    let mut map = BTreeMap::new();
     let cli = Auth::client(&pdb_client.auth);
-    let mut req = cli.get(&(server_url + "/status/v1/services"))
-                     .header(Connection::close());
-    if let Some(auth) = Auth::auth_header(&pdb_client.auth) {
-        req = req.header(auth)
-    };
-    req.send()
+
+    for server_url in pdb_client.server_urls.clone() {
+        let mut req = cli.get(&(server_url.clone() + "/status/v1/services"))
+                         .header(Connection::close());
+        if let Some(auth) = Auth::auth_header(&pdb_client.auth) {
+            req = req.header(auth)
+        };
+        let res = req.send();
+        map.insert(server_url, build_status_json(res));
+    }
+
+    println!("{}", json::as_pretty_json(&json::Json::Object(map)));
 }

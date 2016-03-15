@@ -112,7 +112,6 @@ fn main() {
             }
         }
     } else if args.cmd_status {
-        let resp = admin::get_status(&client);
-        utils::prettify_response_to_stdout(resp);
+        admin::get_status(&client);
     }
 }
