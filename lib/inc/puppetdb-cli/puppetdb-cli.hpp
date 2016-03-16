@@ -106,10 +106,12 @@ LIBPUPPETDB_EXPORT PuppetDBConn get_puppetdb(const std::string& config_path,
  * Query a PuppetDB endpoint for a given config.
  * @param conn PuppetDBConn of the cli configuration.
  * @param query string of the query for PuppetDB (can be either AST or PQL syntax).
+ * @param is_pretty boolean enabling/disabling pretty printing of results
  * @return This function does not return anything.
  */
 LIBPUPPETDB_EXPORT void pdb_query(const PuppetDBConn& conn,
-                                  const std::string& query);
+                                  const std::string& query,
+                                  const bool& is_pretty);
 
 /**
  * Export a PuppetDB archive for a given config.
