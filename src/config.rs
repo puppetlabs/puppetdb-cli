@@ -26,7 +26,7 @@ fn parse_server_urls_works() {
                                      .to_string()))
 }
 
-#[derive(RustcDecodable,Clone)]
+#[derive(RustcDecodable,Clone,Debug)]
 pub struct Config {
     pub server_urls: Vec<String>,
     pub cacert: Option<String>,
@@ -40,9 +40,13 @@ impl Config {
                 urls: Option<String>,
                 cacert: Option<String>,
                 cert: Option<String>,
-                key: Option<String>)
+                key: Option<String>,
+                token: Option<String>)
                 -> Config {
 
+        // TODO Don't parse config if urls aren't HTTP. This is trivial but it
+        // would be best to merge the other auth validation code when
+        // constructing the client with this.
         if urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
             return Config {
                 server_urls: parse_server_urls(urls.unwrap()),
@@ -85,7 +89,7 @@ impl Config {
             } else {
                 cfg_key
             },
-            token: None,
+            token: token,
         }
     }
 }
@@ -107,7 +111,6 @@ fn default_pdb_config_section() -> PdbConfigSection {
         key: None,
     }
 }
-
 
 #[derive(RustcDecodable,Debug)]
 struct CLIConfig {

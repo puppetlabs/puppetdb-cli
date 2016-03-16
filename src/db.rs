@@ -25,6 +25,7 @@ Options:
   --cacert=<path>     Path to CA certificate for auth.
   --cert=<path>       Path to client certificate for auth.
   --key=<path>        Path to client private key for auth.
+  --token=<path>      Path to RBAC token for auth (PE Only).
 ";
 
 use puppetdb::client;
@@ -43,6 +44,7 @@ struct Args {
     flag_cacert: Option<String>,
     flag_cert: Option<String>,
     flag_key: Option<String>,
+    flag_token: Option<String>,
     arg_path: String,
     cmd_import: bool,
     cmd_export: bool,
@@ -86,7 +88,8 @@ fn main() {
                                       args.flag_urls,
                                       args.flag_cacert,
                                       args.flag_cert,
-                                      args.flag_key);
+                                      args.flag_key,
+                                      args.flag_token);
     let client = client::PdbClient::new(config);
     if args.cmd_export {
         let path = args.arg_path;

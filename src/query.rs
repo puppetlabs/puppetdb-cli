@@ -28,6 +28,7 @@ Options:
   --cacert=<path>     Path to CA certificate for auth.
   --cert=<path>       Path to client certificate for auth.
   --key=<path>        Path to client private key for auth.
+  --token=<path>      Path to RBAC token for auth (PE Only).
 ";
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
@@ -40,6 +41,7 @@ struct Args {
     flag_cacert: Option<String>,
     flag_cert: Option<String>,
     flag_key: Option<String>,
+    flag_token: Option<String>,
     arg_query: Option<String>,
 }
 
@@ -63,7 +65,8 @@ fn main() {
                                       args.flag_urls,
                                       args.flag_cacert,
                                       args.flag_cert,
-                                      args.flag_key);
+                                      args.flag_key,
+                                      args.flag_token);
     let client = client::PdbClient::new(config);
     let query_str = args.arg_query.unwrap();
     let resp = client::post_query(&client, query_str);
