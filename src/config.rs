@@ -15,14 +15,14 @@ pub fn default_config_path(mut home_dir: PathBuf) -> String {
     home_dir.to_str().unwrap().to_owned()
 }
 
-fn parse_server_urls(urls: String) -> Vec<String> {
+fn split_server_urls(urls: String) -> Vec<String> {
     urls.split(",").map(|u| u.trim().to_string()).collect()
 }
 
 #[test]
-fn parse_server_urls_works() {
+fn split_server_urls_works() {
     assert_eq!(vec!["http://localhost:8080".to_string(), "http://foo.bar.baz:9190".to_string()],
-               parse_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190"
+               split_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190"
                                      .to_string()))
 }
 
@@ -49,7 +49,7 @@ impl Config {
         // constructing the client with this.
         if urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
             return Config {
-                server_urls: parse_server_urls(urls.unwrap()),
+                server_urls: split_server_urls(urls.unwrap()),
                 cacert: cacert,
                 cert: cert,
                 key: key,
@@ -62,38 +62,34 @@ impl Config {
             cacert: cfg_cacert,
             cert: cfg_cert,
             key: cfg_key,
-        } = match CLIConfig::load(path).puppetdb {
-            Some(section) => section,
-            None => default_pdb_config_section(),
+        } = if !Path::new(&path).exists() {
+            default_pdb_config_section()
+        } else {
+            match CLIConfig::load(path).puppetdb {
+                Some(section) => section,
+                None => default_pdb_config_section(),
+            }
         };
 
         // TODO Add tests for Config parsing edge cases
         Config {
-            server_urls: if let Some(urls) = urls {
-                parse_server_urls(urls)
-            } else {
-                cfg_urls.unwrap()
-            },
-            cacert: if cacert.is_some() {
-                cacert
-            } else {
-                cfg_cacert
-            },
-            cert: if cert.is_some() {
-                cert
-            } else {
-                cfg_cert
-            },
-            key: if key.is_some() {
-                key
-            } else {
-                cfg_key
-            },
+            server_urls: urls.and_then(|s| {
+                                 if s.is_empty() {
+                                     None
+                                 } else {
+                                     Some(s)
+                                 }
+                             })
+                             .and_then(|s| Some(split_server_urls(s)))
+                             .or(cfg_urls)
+                             .unwrap_or(default_server_urls()),
+            cacert: cacert.or(cfg_cacert),
+            cert: cert.or(cfg_cert),
+            key: key.or(cfg_key),
             token: token,
         }
     }
 }
-
 
 #[derive(RustcDecodable,Debug)]
 struct PdbConfigSection {
@@ -101,6 +97,10 @@ struct PdbConfigSection {
     cacert: Option<String>,
     cert: Option<String>,
     key: Option<String>,
+}
+
+fn default_server_urls() -> Vec<String> {
+    vec!["http://127.0.0.1:8080".to_string()]
 }
 
 fn default_pdb_config_section() -> PdbConfigSection {
@@ -119,20 +119,13 @@ struct CLIConfig {
 
 impl CLIConfig {
     fn load(path: String) -> CLIConfig {
-        if !Path::new(&path).exists() {
-            return CLIConfig { puppetdb: Some(default_pdb_config_section()) };
-        }
-        let mut f = match File::open(&path) {
-            Ok(d) => d,
-            Err(e) => pretty_panic!("Error opening config {:?}: {}", path, e),
-        };
+        let mut f = File::open(&path).unwrap_or_else(|e| {
+            pretty_panic!("Error opening config {:?}: {}", path, e)
+        });
         let mut s = String::new();
         if let Err(e) = f.read_to_string(&mut s) {
             pretty_panic!("Error reading from config {:?}: {}", path, e)
         }
-        match json::decode(&s) {
-            Ok(d) => d,
-            Err(e) => pretty_panic!("Error parsing config {:?}: {}", path, e),
-        }
+        json::decode(&s).unwrap_or_else(|e| pretty_panic!("Error parsing config {:?}: {}", path, e))
     }
 }

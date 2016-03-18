@@ -30,10 +30,7 @@ pub type HyperResult = Result<HyperResponse, HyperError>;
 
 /// Exits with an error if the HTTP request failed.
 pub fn assert_connected(res: HyperResult) -> HyperResponse {
-    match res {
-        Ok(response) => response,
-        Err(e) => pretty_panic!("Failed to connect to server: {}", e),
-    }
+    res.unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e))
 }
 
 /// Exits with an error if the response did not have status 200.

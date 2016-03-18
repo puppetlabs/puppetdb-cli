@@ -11,36 +11,33 @@ use super::config::Config;
 use super::utils::HyperResult;
 use super::net::Auth;
 
-#[cfg(feature = "puppet-access")] use puppet_access;
+#[cfg(feature = "puppet-access")]
+use puppet_access;
 
 pub struct PdbClient {
     pub server_urls: Vec<String>,
     pub auth: Auth,
 }
 
+fn is_ssl(server_urls: &Vec<String>) -> bool {
+    server_urls.into_iter()
+               .any(|url| {
+                   "https" ==
+                   Url::parse(&url)
+                       .unwrap_or_else(|e| pretty_panic!("Error parsing url {:?}: {}", url, e))
+                       .scheme
+               })
+}
+
 impl PdbClient {
     pub fn new(config: Config) -> PdbClient {
-        let is_ssl = config.server_urls
-                           .clone()
-                           .into_iter()
-                           .map(|url: String| {
-                               match Url::parse(&url) {
-                                   Ok(u) => u.scheme,
-                                   Err(e) => pretty_panic!("Error parsing url {:?}: {}", url, e),
-                               }
-                           })
-                           .find(|s| s == "https");
-
-        let result = if is_ssl.is_some() {
+        let result = if is_ssl(&config.server_urls) {
             PdbClient::with_auth(config)
         } else {
             PdbClient::without_auth(config)
         };
 
-        match result {
-            Ok(pdb_client) => pdb_client,
-            Err(e) => pretty_panic!("Error: {}", e),
-        }
+        result.unwrap_or_else(|e| pretty_panic!("Error: {}", e))
     }
 
     pub fn without_auth(config: Config) -> Result<PdbClient, io::Error> {
@@ -118,9 +115,9 @@ impl PdbClient {
                         })
                     } else {
                         Err(io::Error::new(io::ErrorKind::InvalidData,
-                                           "ssl requires a token, \
-                                            please use `puppet access login` to retrieve a token \
-                                            (alternatively use 'cert' and 'key' for whitelist validation)"))
+                                           "ssl requires a token, please use `puppet access \
+                                            login` to retrieve a token (alternatively use 'cert' \
+                                            and 'key' for whitelist validation)"))
                     }
 
 
@@ -177,7 +174,7 @@ fn with_auth_works() {
 }
 
 #[test]
- #[cfg(feature = "puppet-access")]
+#[cfg(feature = "puppet-access")]
 /// Check that `PdbClient::with_auth(Config)` validates the config properly
 fn with_auth_works() {
 
@@ -307,5 +304,5 @@ pub fn post_query(pdb_client: &PdbClient, query_str: String) -> HyperResult {
     }
     // TODO Collect errors from each server and return them
     let io_error = io::Error::new(io::ErrorKind::ConnectionRefused, "connection refused");
-    return Err(error::Error::from(io_error));
+    Err(error::Error::from(io_error))
 }
