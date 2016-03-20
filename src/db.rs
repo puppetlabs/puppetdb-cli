@@ -1,10 +1,12 @@
 extern crate rustc_serialize;
 extern crate docopt;
-#[macro_use(pretty_panic)]
-extern crate puppetdb;
 extern crate hyper;
 
-use std::io;
+#[macro_use]
+extern crate puppetdb;
+
+use rustc_serialize::json;
+use std::io::{self, Write};
 use docopt::Docopt;
 
 const USAGE: &'static str = "
@@ -55,12 +57,11 @@ use std::fs::File;
 use std::env;
 
 /// Copies the response body to a file with the given path.
-fn copy_response_to_file(res: utils::HyperResult, path: String) {
-    let mut response = utils::assert_connected(res);
-    utils::assert_status_ok(&mut response);
+fn copy_response_to_file(resp: &mut utils::HyperResponse, path: String) {
+    utils::assert_status_ok(resp);
     match File::create(path.clone()) {
         Ok(mut f) => {
-            io::copy(&mut response, &mut f)
+            io::copy(resp, &mut f)
                 .unwrap_or_else(|e| panic!("Error writing to archive: {}", e));
             println!("Wrote archive to {:?}.", path)
         }
@@ -91,16 +92,16 @@ fn main() {
                                       args.flag_key,
                                       args.flag_token);
     let client = client::PdbClient::new(config);
+
     if args.cmd_export {
-        let path = args.arg_path;
-        let res = admin::get_export(&client, args.flag_anon);
-        copy_response_to_file(res, path);
+        let mut resp = admin::get_export(&client, args.flag_anon)
+            .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+        copy_response_to_file(&mut resp, args.arg_path);
     } else if args.cmd_import {
-        let path = args.arg_path;
-        let res = admin::post_import(&client, path.clone());
-        let mut response = utils::assert_connected(res);
-        utils::assert_status_ok(&mut response);
+        let mut resp = admin::post_import(&client, args.arg_path)
+            .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+        utils::assert_status_ok(&mut resp);
     } else if args.cmd_status {
-        admin::get_status(&client);
+        println!("{}", json::as_pretty_json(&client.status()));
     }
 }

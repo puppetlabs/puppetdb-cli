@@ -1,5 +1,8 @@
 extern crate libc;
 
+use std::io::{self, Read};
+use std::fs::File;
+
 use libc::c_char;
 use std::ffi::CStr;
 use libc::{free, c_void};
@@ -8,23 +11,15 @@ use std::str;
 
 #[link(name = "puppet-access")]
 extern {
-    fn read_token(input: *const c_char) -> *mut c_char;
     fn get_default_token_file() -> *mut c_char;
 }
 
 /// Reads the contents of a token file from the input path.
-///
-/// Returns `None` if the token does not exist.
-pub fn read_token_file(input: String) -> Option<String> {
-    unsafe {
-        let y_ptr = read_token(input.as_ptr() as *const i8);
-        let y = CStr::from_ptr(y_ptr);
-        free(y_ptr as *mut c_void);
-        str::from_utf8(y.to_bytes())
-            .ok()
-            .and_then(|s| Some(s.to_owned()) )
-            .and_then(|s| if s.is_empty() { None } else { Some(s) })
-    }
+pub fn read_token(path: String) -> io::Result<String> {
+    let mut f = try!(File::open(&path));
+    let mut s = String::new();
+    try!(f.read_to_string(&mut s));
+    Ok(s)
 }
 
 /// Gets the default token file location.
@@ -34,11 +29,14 @@ pub fn default_token_file() -> Option<String> {
     unsafe {
         let x_ptr = get_default_token_file();
         let x = CStr::from_ptr(x_ptr);
-        free(x_ptr as *mut c_void);
-        str::from_utf8(x.to_bytes())
+        let rstr = str::from_utf8(x.to_bytes())
             .ok()
             .and_then(|s| Some(s.to_owned()) )
-            .and_then(|s| if s.is_empty() { None } else { Some(s) })
+            .and_then(|s| if s.is_empty() { None } else { Some(s) });
+
+        free(x_ptr as *mut c_void);
+
+        rstr
     }
 }
 

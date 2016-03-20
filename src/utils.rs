@@ -28,11 +28,6 @@ pub type HyperResponse = hyper::client::response::Response;
 pub type HyperError = hyper::error::Error;
 pub type HyperResult = Result<HyperResponse, HyperError>;
 
-/// Exits with an error if the HTTP request failed.
-pub fn assert_connected(res: HyperResult) -> HyperResponse {
-    res.unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e))
-}
-
 /// Exits with an error if the response did not have status 200.
 pub fn assert_status_ok(response: &mut HyperResponse) {
     if response.status != hyper::Ok {

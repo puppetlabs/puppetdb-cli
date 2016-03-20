@@ -1,11 +1,13 @@
 extern crate rustc_serialize;
 extern crate docopt;
-extern crate puppetdb;
 extern crate beautician;
 extern crate hyper;
 
+#[macro_use]
+extern crate puppetdb;
+
 use std::env;
-use std::io;
+use std::io::{self, Write};
 
 use puppetdb::client;
 use puppetdb::utils;
@@ -67,15 +69,16 @@ fn main() {
                                       args.flag_cert,
                                       args.flag_key,
                                       args.flag_token);
-    let client = client::PdbClient::new(config);
-    let query_str = args.arg_query.unwrap();
-    let resp = client::post_query(&client, query_str);
-    let mut response = utils::assert_connected(resp);
-    utils::assert_status_ok(&mut response);
+
+    let mut resp = client::PdbClient::new(config)
+        .query(args.arg_query.unwrap())
+        .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+
+    utils::assert_status_ok(&mut resp);
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    beautician::prettify(&mut response, &mut handle)
+    beautician::prettify(&mut resp, &mut handle)
         .ok()
         .expect("failed to write response");
 }
