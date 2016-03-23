@@ -31,7 +31,7 @@ pub fn post_import(config: &Config, path: String) -> Result {
     let server_url: String = config.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
     let mut multipart = multipart(config, url);
-    multipart.write_file("archive", &path);
+    multipart.write_file("archive", &path).unwrap();
     multipart.send()
 }
 
