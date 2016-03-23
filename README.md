@@ -8,16 +8,20 @@
 
 ## Compatibility
 
-This CLI is compatible with PuppetDB v4.
+This CLI is compatible with
+[PuppetDB 4.0.0](https://docs.puppetlabs.com/puppetdb/4.0/release_notes.html#section)
+and greater.
 
 ## Installation
 
 Using `rustc` and `cargo` (stable, beta, or nightly):
 
 ```zsh
-<rust-puppetdb-cli>$ export PATH=./target/debug
-<rust-puppetdb-cli>$ cargo build
-<rust-puppetdb-cli>$ puppet-query 'nodes[certname]{}'
+$ export PATH=./target/debug:$PATH
+$ export OPENSSL_LIB_DIR=$(brew --prefix)/lib
+$ export OPENSSL_INCLUDE_DIR=$(brew --prefix)/include
+$ cargo build
+$ puppet-query 'nodes[certname]{}'
 [
   {
     "certname" : "baz.example.com"
@@ -29,7 +33,7 @@ Using `rustc` and `cargo` (stable, beta, or nightly):
     "certname" : "foo.example.com"
   }
 ]
-<rust-puppetdb-cli>$ puppet-db status
+$ puppet-db status
 {
   "puppetdb-status": {
     "service_version": "4.0.0-SNAPSHOT",
@@ -67,7 +71,7 @@ The format of the config file can be deduced from the following example.
   {
     "puppetdb" : {
       "server_urls" : [
-        "https://pdb.internal.lan:8081",
+  "https://pdb.internal.lan:8081",
         "https://read-pdb.internal.lan:8081"
       ],
       "cacert" : "/path/to/cacert",
