@@ -71,8 +71,8 @@ fn main() {
                                       args.flag_token);
 
     let mut resp = client::PdbClient::new(config)
-        .query(args.arg_query.unwrap())
-        .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+                       .query(args.arg_query.unwrap())
+                       .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
 
     utils::assert_status_ok(&mut resp);
 

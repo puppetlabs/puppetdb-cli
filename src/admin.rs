@@ -14,7 +14,7 @@ pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
     let mut multipart = Auth::multipart(&pdb_client.auth, url);
     multipart.write_file("archive", &path)
-        .unwrap_or_else(|e| pretty_panic!("Error writing archive to request: {}", e));
+             .unwrap_or_else(|e| pretty_panic!("Error writing archive to request: {}", e));
     multipart.send()
 }
 

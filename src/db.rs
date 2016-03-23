@@ -61,8 +61,7 @@ fn copy_response_to_file(resp: &mut utils::HyperResponse, path: String) {
     utils::assert_status_ok(resp);
     match File::create(path.clone()) {
         Ok(mut f) => {
-            io::copy(resp, &mut f)
-                .unwrap_or_else(|e| panic!("Error writing to archive: {}", e));
+            io::copy(resp, &mut f).unwrap_or_else(|e| panic!("Error writing to archive: {}", e));
             println!("Wrote archive to {:?}.", path)
         }
         Err(x) => panic!("Unable to create archive: {}", x),
@@ -95,11 +94,11 @@ fn main() {
 
     if args.cmd_export {
         let mut resp = admin::get_export(&client, args.flag_anon)
-            .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+                           .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
         copy_response_to_file(&mut resp, args.arg_path);
     } else if args.cmd_import {
         let mut resp = admin::post_import(&client, args.arg_path)
-            .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+                           .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
         utils::assert_status_ok(&mut resp);
     } else if args.cmd_status {
         println!("{}", json::as_pretty_json(&client.status()));

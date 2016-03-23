@@ -98,17 +98,24 @@ impl PdbClient {
                     },
                 })
             } else if let Some(path) = config.token {
-                let token_contents = try!(puppet_access::read_token(path.clone()));
-                Ok(PdbClient {
-                    server_urls: config.server_urls,
-                    auth: Auth::TokenAuth {
-                        cacert: config.cacert.unwrap(),
-                        token: token_contents,
-                    },
-                })
+                match puppet_access::read_token(path.clone()) {
+                    Ok(contents) => {
+                        Ok(PdbClient {
+                            server_urls: config.server_urls,
+                            auth: Auth::TokenAuth {
+                                cacert: config.cacert.unwrap(),
+                                token: contents,
+                            },
+                        })
+                    }
+                    Err(e) => {
+                        Err(io::Error::new(e.kind(),
+                                           format!("could not open token {:?}: {}", path, e)))
+                    }
+                }
             } else {
                 if let Some(path) = puppet_access::default_token_file() {
-                    match puppet_access::read_token(path) {
+                    match puppet_access::read_token(path.clone()) {
                         Ok(contents) => {
                             Ok(PdbClient {
                                 server_urls: config.server_urls,
@@ -127,7 +134,14 @@ impl PdbClient {
                                                         (alternatively use 'cert' and 'key' for \
                                                         whitelist validation)"))
                                 }
-                                _ => Err(e),
+                                // For exmaple this could happen if a user made
+                                // a directory `$HOME/.puppetlabs/token`
+                                _ => {
+                                    Err(io::Error::new(e.kind(),
+                                                       format!("could not open token {:?}: {}",
+                                                               path,
+                                                               e)))
+                                }
                             }
                         }
                     }
@@ -149,9 +163,9 @@ impl PdbClient {
 
         for server_url in self.server_urls.clone() {
             let mut req = cli.post(&(server_url + "/pdb/query/v4"))
-                .body(&req_body)
-                .header(ContentType::json())
-                .header(Connection::close());
+                             .body(&req_body)
+                             .header(ContentType::json())
+                             .header(Connection::close());
             if let Some(auth) = Auth::auth_header(&self.auth) {
                 req = req.header(auth)
             };
@@ -175,7 +189,7 @@ impl PdbClient {
 
         for server_url in self.server_urls.clone() {
             let mut req = cli.get(&(server_url.clone() + "/status/v1/services"))
-                .header(Connection::close());
+                             .header(Connection::close());
             if let Some(auth) = Auth::auth_header(&self.auth) {
                 req = req.header(auth)
             };
