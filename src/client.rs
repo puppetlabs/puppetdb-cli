@@ -114,7 +114,8 @@ impl PdbClient {
                     }
                 }
             } else {
-                if let Some(path) = puppet_access::default_token_file() {
+                let path = puppet_access::default_token_file();
+                if !path.is_empty() {
                     match puppet_access::read_token(path.clone()) {
                         Ok(contents) => {
                             Ok(PdbClient {
