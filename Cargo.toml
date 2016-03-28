@@ -23,7 +23,7 @@ path = "src/query.rs"
 
 [dependencies]
 beautician = "0.1.*"
-hyper = "0.7.*"
+hyper = "0.8.*"
 docopt = "0.6.*"
 rustc-serialize = "0.3.*"
 url = "0.5.*"
@@ -36,7 +36,7 @@ version = "0.7.*"
 features = ["tlsv1_2"]
 
 [dependencies.multipart]
-version = "0.5.*"
+version = "0.6.*"
 default-features = false
 features = ["hyper", "client"]
 
