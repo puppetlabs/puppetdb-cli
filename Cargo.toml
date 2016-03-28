@@ -36,7 +36,7 @@ version = "0.7.*"
 features = ["tlsv1_2"]
 
 [dependencies.multipart]
-version = "0.6.*"
+version = "0.6.0-alpha"
 default-features = false
 features = ["hyper", "client"]
 
