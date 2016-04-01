@@ -21,9 +21,14 @@ pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
 pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> HyperResult {
     // Import and export are not prepared to use token auth
     let server_url: String = pdb_client.server_urls[0].clone();
-    Auth::client(&pdb_client.auth)
-        .get(&(server_url + "/pdb/admin/v1/archive"))
-        .body(&("anonymization=".to_string() + &anonymization))
-        .header(Connection::close())
-        .send()
+    let body = "anonymization=".to_string() + &anonymization;
+    let cli = Auth::client(&pdb_client.auth);
+
+    let mut req = cli.get(&(server_url + "/pdb/admin/v1/archive"))
+        .body(&body)
+        .header(Connection::close());
+    if let Some(auth) = Auth::auth_header(&pdb_client.auth) {
+        req = req.header(auth)
+    };
+    req.send()
 }

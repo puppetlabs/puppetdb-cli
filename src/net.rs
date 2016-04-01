@@ -85,9 +85,11 @@ impl Auth {
                                          Some(Path::new(key)));
                 Request::with_connector(Method::Post, url, &conn).unwrap()
             }
-            &Auth::TokenAuth{ref cacert, ..} => {
+            &Auth::TokenAuth{ref cacert, ref token, .. } => {
                 let conn = ssl_connector(Path::new(cacert), None, None);
-                Request::with_connector(Method::Post, url, &conn).unwrap()
+                let mut req = Request::with_connector(Method::Post, url, &conn).unwrap();
+                req.headers_mut().set(XAuthentication(token.clone()));
+                req
             }
             &Auth::NoAuth => Request::new(Method::Post, url).unwrap(),
         };

@@ -149,7 +149,8 @@ impl PdbClient {
                 } else {
                     Err(io::Error::new(io::ErrorKind::Other,
                                        "unable to set default token path, \
-                                        please use the `--token` option directly"))
+                                        please use the `--token` option directly"
+                    ))
                 }
             }
         }
