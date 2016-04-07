@@ -2,27 +2,35 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [0.2.0] - TBD
+## [1.0.0] - 2016-04-07
 
 ### Summary
 
-Fixed minor bugs and irritations.
+Initial release of the PuppetDB CLI subcommands.
+
+The PuppetDB CLI is intended to facilitate friendlier interactions with the
+PuppetDB API. 
+
+The PuppetDB CLI accepts a configuration file with SSL credentials and the url
+for your PuppetDB server so you can issue queries to PuppetDB on your own
+machine without needing to type long `curl` invocations.
+
+We intend to use the PuppetDB CLI to provide human readable output formats and
+helpful hints for interacting with the API more generally.
+
+### Installation
+
+Please see the
+[PuppetDB documentation](https://docs.puppetlabs.com/puppetdb/master/pdb_client_tools.html)
+for installation and usage instructions.
 
 ### Features
-- Bumped Leatherman submodule from bc900e3d494a3932f97e90b8c6d5916690295a24 to a1627940f269b65537ee1b5f87c0624866218fd3.
-- Added specific git commit to @PROJECT_NAME_UPPER@_VERSION_WITH_COMMIT
-- Split `cpplint` and `cppcheck` into their own Jenkins CI jobs.
 
-### Fixes
-- Fixed no-op acceptance Rake task for use in Jenkins CI.
+- New implementations of our `puppetdb import` and `puppetdb export` tools for
+  faster startup. The commands are now Puppet subcommands `puppet-db import` and
+  `puppet-db export` respectively.
+- A `puppet-query` subcommand for querying PuppetDB with PQL or AST queries.
 
-## [0.1.0] - 2015-07-08
+### Contributors 
 
-### Summary
-
-Initial release of cpp-project-template, an example C++11 project.
-
-### Features
-- Basic command-line skeleton with dynamic library in C++.
-- Travis and AppVeyor CI jobs, coveralls.io triggered from Travis, and no-op acceptance Rake tasks.
-- Relies on the Leatherman C++ utility library.
+Andrew Roetker, Rob Browing, Ryan Senior, and Wyatt Alt.
