@@ -1,267 +1,384 @@
-extern crate hyper;
-use std::io::{self, Read, Write};
-use std::process;
-use std::fs::File;
-use std::path::{Path, PathBuf};
-
+use std::io::{self, Write, Read};
 use rustc_serialize::json::{self, ToJson};
+use std::collections::BTreeMap;
 
-use openssl::ssl::{SslContext, SslMethod};
-use openssl::ssl::error::SslError;
-use openssl::x509::X509FileType;
-
-use std::result;
-use std::sync::Arc;
-
-use hyper::net::{Openssl, HttpsConnector};
-use hyper::Client;
+use hyper;
+use hyper::error;
 use hyper::header::{Connection, ContentType};
 
-use super::utils::Result;
+use url::Url;
 
-pub fn ssl_context<C>(cacert: C, cert: C, key: C) -> result::Result<Openssl, SslError>
-    where C: AsRef<Path> {
-    let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
-    try!(ctx.set_cipher_list("TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"));
-    try!(ctx.set_CA_file(cacert.as_ref()));
-    try!(ctx.set_certificate_file(cert.as_ref(), X509FileType::PEM));
-    try!(ctx.set_private_key_file(key.as_ref(), X509FileType::PEM));
-    Ok(Openssl { context: Arc::new(ctx) })
-}
+use super::config::Config;
+use super::utils::HyperResult;
+use super::net::Auth;
 
-pub fn ssl_connector<C>(cacert: C, cert: C, key: C) -> HttpsConnector<Openssl>
-    where C: AsRef<Path> {
-    let ctx = match ssl_context(cacert, cert, key) {
-        Ok(ctx) => ctx,
-        Err(e) => {
-            println_stderr!("Error opening certificate files: {}", e);
-            process::exit(1)
-        }
-    };
-    HttpsConnector::new(ctx)
-}
+#[cfg(feature = "puppet-access")]
+use puppet_access;
+#[cfg(feature = "puppet-access")]
+use std::env;
 
-#[derive(RustcDecodable, RustcEncodable)]
-pub struct Config {
+/// PuppetDB client struct.
+pub struct PdbClient {
+    /// List of PuppetDB servers.
     pub server_urls: Vec<String>,
-    pub cacert: Option<String>,
-    pub cert: Option<String>,
-    pub key: Option<String>
+    /// Type of authentication to use when connecting to PuppetDB.
+    pub auth: Auth,
 }
 
-/// Given a `home_dir` (e.g. from `std::env::home_dir()`), returns the default
-/// location of the client configuration file,
-/// `$HOME/.puppetlabs/client-tools/puppetdb.conf`.
-pub fn default_config_path(mut home_dir: PathBuf) -> String {
-    home_dir.push(".puppetlabs");
-    home_dir.push("client-tools");
-    home_dir.push("puppetdb");
-    home_dir.set_extension("conf");
-    home_dir.to_str().unwrap().to_owned()
+/// Checks whether the vector of urls contains a url that needs to use SSL, i.e.
+/// has `https` as the scheme.
+fn is_ssl(server_urls: &Vec<String>) -> bool {
+    server_urls.into_iter()
+               .any(|url| {
+                   "https" ==
+                   Url::parse(&url)
+                       .unwrap_or_else(|e| pretty_panic!("Error parsing url {:?}: {}", url, e))
+                       .scheme
+               })
 }
 
-fn default_server_urls() -> Vec<String> {
-    vec!["http://127.0.0.1:8080".to_string()]
-}
-
-fn parse_server_urls(urls: String) -> Vec<String> {
-    urls.split(",").map(|u| u.to_string()).collect()
-}
-
-#[test]
-fn parse_server_urls_works() {
-    assert_eq!(vec!["http://localhost:8080  ".to_string(),
-                    "http://foo.bar.baz:9190".to_string() ],
-               parse_server_urls(
-                   "http://localhost:8080  ,http://foo.bar.baz:9190".to_string()))
-}
-
-
-#[derive(RustcDecodable, RustcEncodable)]
-pub struct CLIConfig {
-    puppetdb: Config,
-}
-
-#[derive(RustcEncodable)]
-pub struct PdbRequest {
-    query: json::Json,
-}
-
-/// Struct to hold PuppetDB client configuration.
-impl Config {
-    /// Construct new client configuration, intended to be used with command
-    /// flags where `path` is the path to the config to load if any of the other
-    /// settings are empty.
-    pub fn new(path: String,
-               urls: String,
-               cacert: String,
-               cert: String,
-               key: String) -> Config {
-       let mut config: Config =
-            // Do not bother loading the config if the user supplied all the
-            // config via flags
-            if !urls.is_empty()
-            && !cacert.is_empty() && !cert.is_empty() && !key.is_empty() {
-                Default::default()
-            } else {
-                Config::load(path)
-            };
-        if !urls.is_empty() {
-            config.server_urls = parse_server_urls(urls.clone())
+impl PdbClient {
+    pub fn new(config: Config) -> PdbClient {
+        let result = if is_ssl(&config.server_urls) {
+            PdbClient::with_auth(config)
+        } else {
+            PdbClient::without_auth(config)
         };
-        if !cacert.is_empty() { config.cacert = Some(cacert) };
-        if !cert.is_empty() { config.cert = Some(cert) };
-        if !key.is_empty() { config.key = Some(key) };
-        config
+
+        result.unwrap_or_else(|e| pretty_panic!("Error: {}", e))
     }
 
-    pub fn load(path: String) -> Config {
-        let mut f = match File::open(&path) {
-            Ok(d) => d,
-            Err(e) => {
-                println_stderr!("Error opening config {:?}: {}", path, e);
-                process::exit(1)
-            }
-        };
-        let mut s = String::new();
-        if let Err(e) = f.read_to_string(&mut s) {
-            println_stderr!("Error reading from config {:?}: {}", path, e);
-            process::exit(1)
+    pub fn without_auth(config: Config) -> io::Result<PdbClient> {
+        Ok(PdbClient {
+            server_urls: config.server_urls,
+            auth: Auth::NoAuth,
+        })
+    }
+
+    #[cfg(not(feature = "puppet-access"))]
+    pub fn with_auth(config: Config) -> io::Result<PdbClient> {
+
+        if config.token.is_some() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData,
+                                      "to use token auth please install Puppet Enterprise."));
         }
-        let cli_config: CLIConfig = match json::decode(&s) {
-            Ok(d) => d,
-            Err(e) => {
-                println_stderr!("Error parsing config ------> {:?}: {}", path, e);
-                process::exit(1)
-            }
-        };
-        let mut config: Config = cli_config.puppetdb;
-        config.server_urls = if config.server_urls.len() > 0 {
-            config.server_urls
+
+        if config.cacert.is_none() {
+            Err(io::Error::new(io::ErrorKind::InvalidData,
+                               "ssl requires 'cacert' to be set"))
         } else {
-            default_server_urls()
-        };
-        config
+            if config.cert.is_some() && config.key.is_some() {
+                Ok(PdbClient {
+                    server_urls: config.server_urls,
+                    auth: Auth::CertAuth {
+                        cacert: config.cacert.unwrap(),
+                        cert: config.cert.unwrap(),
+                        key: config.key.unwrap(),
+                    },
+                })
+            } else {
+                Err(io::Error::new(io::ErrorKind::InvalidData,
+                                   "ssl requires 'cert' and 'key' to be set"))
+            }
+        }
+    }
+
+    #[cfg(feature = "puppet-access")]
+    pub fn with_auth(config: Config) -> io::Result<PdbClient> {
+
+        if config.cacert.is_none() {
+            Err(io::Error::new(io::ErrorKind::InvalidData,
+                               "ssl requires 'cacert' to be set"))
+        } else {
+            if config.cert.is_some() && config.key.is_some() {
+                Ok(PdbClient {
+                    server_urls: config.server_urls,
+                    auth: Auth::CertAuth {
+                        cacert: config.cacert.unwrap(),
+                        cert: config.cert.unwrap(),
+                        key: config.key.unwrap(),
+                    },
+                })
+            } else if let Some(path) = config.token {
+                match puppet_access::read_token(path.clone()) {
+                    Ok(contents) => {
+                        Ok(PdbClient {
+                            server_urls: config.server_urls,
+                            auth: Auth::TokenAuth {
+                                cacert: config.cacert.unwrap(),
+                                token: contents,
+                            },
+                        })
+                    }
+                    Err(e) => {
+                        Err(io::Error::new(e.kind(),
+                                           format!("could not open token {:?}: {}", path, e)))
+                    }
+                }
+            } else {
+                let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+                let path = puppet_access::default_token_path(conf_dir);
+                if !path.is_empty() {
+                    match puppet_access::read_token(path.clone()) {
+                        Ok(contents) => {
+                            Ok(PdbClient {
+                                server_urls: config.server_urls,
+                                auth: Auth::TokenAuth {
+                                    cacert: config.cacert.unwrap(),
+                                    token: contents,
+                                },
+                            })
+                        }
+                        Err(e) => {
+                            match e.kind() {
+                                io::ErrorKind::NotFound => {
+                                    Err(io::Error::new(io::ErrorKind::NotFound,
+                                                       "ssl requires a token, please use `puppet \
+                                                        access login` to retrieve a token \
+                                                        (alternatively use 'cert' and 'key' for \
+                                                        whitelist validation)"))
+                                }
+                                // For exmaple this could happen if a user made
+                                // a directory `$HOME/.puppetlabs/token`
+                                _ => {
+                                    Err(io::Error::new(e.kind(),
+                                                       format!("could not open token {:?}: {}",
+                                                               path,
+                                                               e)))
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Err(io::Error::new(io::ErrorKind::Other,
+                                       "unable to set default token path, \
+                                        please use the `--token` option directly"
+                    ))
+                }
+            }
+        }
     }
 
     /// POSTs `query_str` (either AST or PQL) to configured PuppetDBs.
-    pub fn query(&self, query_str: String) -> Result {
-        let cli: Client = client(self);
-        for server_url in self.server_urls.clone() {
-            let query = if query_str.trim().starts_with("[") {
-                json::Json::from_str(&query_str).unwrap()
-            } else {
-                query_str.to_json()
-            };
-            let pdb_query = PdbRequest{query: query};
-            let pdb_query_str = json::encode(&pdb_query).unwrap().to_string();
+    pub fn query(&self, query_str: String) -> HyperResult {
 
-            let res = cli
-                .post(&(server_url + "/pdb/query/v4"))
-                .body(&pdb_query_str)
-                .header(ContentType::json())
-                .header(Connection::close())
-                .send();
+        let cli = Auth::client(&self.auth);
+
+        let req_body = PdbQueryRequest { query: query_to_json(query_str) }.to_string();
+
+        for server_url in self.server_urls.clone() {
+            let req = cli.post(&(server_url + "/pdb/query/v4"))
+                         .body(&req_body)
+                         .header(ContentType::json())
+                         .header(Connection::close());
+            let res = Auth::auth_header(&self.auth, req).send();
             if res.is_ok() {
                 return res;
             }
-        };
-        // TODO Collect errors from each server and return them
-        let io_error = io::Error::new(
-            io::ErrorKind::ConnectionRefused, "connection refused"
-        );
-        return Err(hyper::error::Error::from(io_error));
-    }
-}
-
-
-
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            server_urls: default_server_urls(),
-            cacert: None,
-            cert: None,
-            key: None
         }
+        // TODO Collect errors from each server and return them
+        let io_error = io::Error::new(io::ErrorKind::ConnectionRefused, "connection refused");
+        Err(error::Error::from(io_error))
+    }
+
+    /// GETs the trapperkeeper status of each configured PuppetDB and constructs
+    /// a map where the keys are the urls and the values are the statuses.
+    /// Connection error etc. are represented as JSON objects with a single
+    /// `error` key whose value is the error message.
+    pub fn status(&self) -> json::Json {
+        let mut map = BTreeMap::new();
+        let cli = Auth::client(&self.auth);
+
+        for server_url in self.server_urls.clone() {
+            let req = cli.get(&(server_url.clone() + "/status/v1/services"))
+                             .header(Connection::close());
+            let res = Auth::auth_header(&self.auth, req).send();
+            map.insert(server_url, build_response_json(res));
+        }
+        json::Json::Object(map)
     }
 }
 
-pub fn client(config: &Config) -> Client {
-    match config {
-        &Config{ cacert: Some(ref cacert),
-                 cert: Some(ref cert),
-                 key: Some(ref key), ..} => Client::with_connector(ssl_connector(Path::new(&cacert),
-                                                                                 Path::new(&cert),
-                                                                                 Path::new(&key))),
-        _ => Client::new()
+#[test]
+#[cfg(not(feature = "puppet-access"))]
+/// Check that `PdbClient::with_auth(Config)` validates the config properly
+fn with_auth_works() {
+
+    let no_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: None,
+        cert: None,
+        key: None,
+        token: None,
+    };
+    assert!(PdbClient::with_auth(no_auth).is_err());
+
+    let missing_cacert_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: None,
+        cert: Some("bar".to_string()),
+        key: Some("bar".to_string()),
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_cacert_cert_auth).is_err());
+
+    let missing_cert_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: None,
+        key: Some("bar".to_string()),
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_cert_cert_auth).is_err());
+
+    let missing_key_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: Some("bar".to_string()),
+        key: None,
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_key_cert_auth).is_err());
+}
+
+#[test]
+#[cfg(feature = "puppet-access")]
+/// Check that `PdbClient::with_auth(Config)` validates the config properly
+fn with_auth_works() {
+
+    let no_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: None,
+        cert: None,
+        key: None,
+        token: None,
+    };
+    assert!(PdbClient::with_auth(no_auth).is_err());
+
+    let missing_cacert_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: None,
+        cert: Some("bar".to_string()),
+        key: Some("bar".to_string()),
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_cacert_cert_auth).is_err());
+
+    let missing_cert_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: None,
+        key: Some("bar".to_string()),
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_cert_cert_auth).is_err());
+
+    let missing_key_cert_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: Some("bar".to_string()),
+        key: None,
+        token: None,
+    };
+    assert!(PdbClient::with_auth(missing_key_cert_auth).is_err());
+
+    // CertAuth takes priority over TokenAuth
+    let all_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: Some("bar".to_string()),
+        key: Some("bar".to_string()),
+        token: Some("bar".to_string()),
+    };
+    assert!(PdbClient::with_auth(all_auth.clone()).ok().is_some());
+    assert!(match PdbClient::with_auth(all_auth).unwrap().auth {
+        Auth::CertAuth{..} => true,
+        _ => false,
+    });
+
+    let missing_cacert_token_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: None,
+        cert: None,
+        key: None,
+        token: Some("bar".to_string()),
+    };
+    assert!(PdbClient::with_auth(missing_cacert_token_auth).is_err());
+
+
+    let token_auth = Config {
+        server_urls: vec!["foo".to_string()],
+        cacert: Some("bar".to_string()),
+        cert: None,
+        key: None,
+        token: Some("bar".to_string()),
+    };
+    assert!(PdbClient::with_auth(token_auth.clone()).ok().is_some());
+    assert!(match PdbClient::with_auth(token_auth).unwrap().auth {
+        Auth::TokenAuth{..} => true,
+        _ => false,
+    });
+}
+
+#[derive(RustcEncodable)]
+struct PdbQueryRequest {
+    query: json::Json,
+}
+
+/// A helper struct to make encoding the json for a PDB query request body
+/// easier.
+impl PdbQueryRequest {
+    fn to_string(&self) -> String {
+        json::encode(self).unwrap().to_string()
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::fs::File;       
-    use rustc_serialize::json;
-    use std::io::{Write,Error};
-    use std::path::{PathBuf};
-
-    extern crate tempdir;
-    use self::tempdir::*;
-
-    fn create_temp_path(temp_dir: &TempDir,file_name: &str) -> PathBuf {
-        temp_dir.path().join(file_name)
+/// Converts a PuppetDB AST or PQL to valid JSON. For a PQL query this just
+/// means escaping the string. For an AST query this means parsing the string.
+fn query_to_json(query: String) -> json::Json {
+    if query.trim().starts_with("[") {
+        json::Json::from_str(&query).unwrap()
+    } else {
+        query.to_json()
     }
+}
 
-    fn spit_config(file_path: &str, config: &CLIConfig) -> Result<(),Error> {
-        let mut f = try!(File::create(file_path));
-        try!(f.write_all(json::encode(config).unwrap().as_bytes()));
-        Ok(())
-    }
+#[test]
+fn query_to_json_works() {
+    assert_eq!("\"nodes{ certname ~ \\\".*\\\" }\"",
+               query_to_json("nodes{ certname ~ \".*\" }".to_string()).to_string());
+    assert_eq!("[\"from\",\"nodes\",[\"~\",\"certname\",\".*\"]]",
+               query_to_json("   [\"from\", \"nodes\",[\"~\", \"certname\", \".*\"]]".to_string())
+                   .to_string());
+}
 
-    #[test]
-    fn load_test_all_fields(){
-        let config = CLIConfig { 
-            puppetdb: Config {
-                server_urls: vec!["http://foo".to_string()],
-                cacert: Some("foo".to_string()),
-                cert: Some("bar".to_string()),
-                key: Some("baz".to_string())
+fn build_error_json(e: String) -> json::Json {
+    let mut error_map = BTreeMap::new();
+    error_map.insert("error".to_string(), e.to_json());
+    json::Json::Object(error_map)
+}
+
+fn build_response_json(resp: HyperResult) -> json::Json {
+    match resp {
+        Ok(mut r) => {
+            match r.status {
+                hyper::Ok => {
+                    let mut b = json::Builder::new(r.bytes().map(|c| c.unwrap() as char));
+                    b.build().unwrap_or_else(|e| {
+                        let msg = format!("Unable to build JSON object from server: {}", e);
+                        build_error_json(msg)
+                    })
+                }
+                _ => {
+                    let mut temp = String::new();
+                    let msg = match r.read_to_string(&mut temp) {
+                        Err(x) => format!("Unable to read response from server: {}", x),
+                        _ => temp,
+                    };
+                    build_error_json(msg)
+                }
             }
-        };
-
-        let temp_dir= TempDir::new_in("target","test-").unwrap();
-        let temp_path = create_temp_path(&temp_dir, "testfile.json");
-        let path_str = temp_path.as_path().to_str().unwrap();
-
-        spit_config(path_str, &config).unwrap();
-        let slurped_config = Config::load(path_str.to_string());
-
-        assert_eq!(config.puppetdb.server_urls[0], slurped_config.server_urls[0]);
-        assert_eq!(config.puppetdb.cacert, slurped_config.cacert);
-        assert_eq!(config.puppetdb.cert, slurped_config.cert);
-        assert_eq!(config.puppetdb.key, slurped_config.key)
-    }
-
-    fn spit_string(file_path: &str, contents: &str) -> Result<(),Error> {
-        let mut f = try!(File::create(file_path));
-        try!(f.write_all(contents.as_bytes()));
-        Ok(())
-    }
-
-    #[test]
-    fn load_test_only_urls(){
-
-        let temp_dir = TempDir::new_in("target","test-").unwrap();
-        let temp_path= create_temp_path(&temp_dir, "testfile.json");
-        let path_str = temp_path.as_path().to_str().unwrap();
-
-        spit_string(&path_str, "{\"puppetdb\":{\"server_urls\":[\"http://foo\"]}}").unwrap();
-        let slurped_config = Config::load(path_str.to_string());
-
-        assert_eq!("http://foo", slurped_config.server_urls[0]);
-        assert_eq!(None, slurped_config.cacert);
-        assert_eq!(None, slurped_config.cert);
-        assert_eq!(None, slurped_config.key);
+        }
+        Err(e) => build_error_json(e.to_string()),
     }
 }

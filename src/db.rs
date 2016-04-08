@@ -1,12 +1,12 @@
 extern crate rustc_serialize;
 extern crate docopt;
-#[macro_use(println_stderr)]
-extern crate puppetdb;
-extern crate beautician;
 extern crate hyper;
 
+#[macro_use]
+extern crate puppetdb;
+
+use rustc_serialize::json;
 use std::io::{self, Write};
-use std::process;
 use docopt::Docopt;
 
 const USAGE: &'static str = "
@@ -27,9 +27,11 @@ Options:
   --cacert=<path>     Path to CA certificate for auth.
   --cert=<path>       Path to client certificate for auth.
   --key=<path>        Path to client private key for auth.
+  --token=<path>      Path to RBAC token for auth (PE Only).
 ";
 
 use puppetdb::client;
+use puppetdb::config;
 use puppetdb::admin;
 use puppetdb::utils;
 
@@ -39,11 +41,12 @@ const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 struct Args {
     flag_version: bool,
     flag_anon: String,
-    flag_config: String,
-    flag_urls: String,
-    flag_cacert: String,
-    flag_cert: String,
-    flag_key: String,
+    flag_config: Option<String>,
+    flag_urls: Option<String>,
+    flag_cacert: Option<String>,
+    flag_cert: Option<String>,
+    flag_key: Option<String>,
+    flag_token: Option<String>,
     arg_path: String,
     cmd_import: bool,
     cmd_export: bool,
@@ -54,63 +57,50 @@ use std::fs::File;
 use std::env;
 
 /// Copies the response body to a file with the given path.
-fn copy_response_to_file(res: utils::Result, path: String) {
-    match res {
-        Ok(mut response) => {
-            utils::assert_status_ok(&mut response);
-            match File::create(path.clone()) {
-                Ok(mut f) => {
-                    if let Err(e) = io::copy(&mut response, &mut f) {
-                        panic!("Error writing to archive: {}", e);
-                    }
-                    println!("Wrote archive to {:?}.", path)
-                },
-                Err(x) => panic!("Unable to create archive: {}", x),
-            };
-        },
-        Err(e) => {
-            println_stderr!("Failed to connect to PuppetDB: {}", e);
-            process::exit(1)
-        },
+fn copy_response_to_file(resp: &mut utils::HyperResponse, path: String) {
+    utils::assert_status_ok(resp);
+    match File::create(path.clone()) {
+        Ok(mut f) => {
+            io::copy(resp, &mut f).unwrap_or_else(|e| panic!("Error writing to archive: {}", e));
+            println!("Wrote archive to {:?}.", path)
+        }
+        Err(x) => panic!("Unable to create archive: {}", x),
     };
 }
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.decode())
-                            .unwrap_or_else(|e| e.exit());
+                         .and_then(|d| d.decode())
+                         .unwrap_or_else(|e| e.exit());
     if args.flag_version {
         println!("puppet-db v{}", VERSION.unwrap_or("unknown"));
         return;
     }
 
-    let path: String = if args.flag_config.is_empty() {
-        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
-        client::default_config_path(conf_dir)
+    let path = if let Some(cfg_path) = args.flag_config {
+        cfg_path
     } else {
-        args.flag_config
+        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+        config::default_config_path(conf_dir)
     };
 
-    let config = client::Config::new(path,
-                                     args.flag_urls,
-                                     args.flag_cacert,
-                                     args.flag_cert,
-                                     args.flag_key);
+    let config = config::Config::load(path,
+                                      args.flag_urls,
+                                      args.flag_cacert,
+                                      args.flag_cert,
+                                      args.flag_key,
+                                      args.flag_token);
+    let client = client::PdbClient::new(config);
+
     if args.cmd_export {
-        let path = args.arg_path;
-        let res = admin::get_export(&config, args.flag_anon);
-        copy_response_to_file(res, path);
+        let mut resp = admin::get_export(&client, args.flag_anon)
+                           .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+        copy_response_to_file(&mut resp, args.arg_path);
     } else if args.cmd_import {
-        let path = args.arg_path;
-        match admin::post_import(&config, path.clone()) {
-            Ok(mut response) => utils::assert_status_ok(&mut response),
-            Err(e) => {
-                println_stderr!("Failed to connect to PuppetDB: {}", e);
-                process::exit(1)
-            },
-        }
+        let mut resp = admin::post_import(&client, args.arg_path)
+                           .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+        utils::assert_status_ok(&mut resp);
     } else if args.cmd_status {
-        let resp = admin::get_status(&config);
-        utils::prettify_response_to_stdout(resp);
+        println!("{}", json::as_pretty_json(&client.status()));
     }
 }
