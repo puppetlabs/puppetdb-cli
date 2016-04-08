@@ -1,10 +1,10 @@
 extern crate beautician;
 #[macro_use]
 extern crate hyper;
-extern crate multipart;
-extern crate url;
-extern crate rustc_serialize;
 extern crate openssl;
+extern crate url;
+extern crate multipart;
+extern crate rustc_serialize;
 
 #[cfg(feature = "puppet-access")]
 extern crate puppet_access;

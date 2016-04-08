@@ -105,7 +105,7 @@ fn default_server_urls() -> Vec<String> {
 
 fn default_pdb_config_section() -> PdbConfigSection {
     PdbConfigSection {
-        server_urls: Some(vec!["http://127.0.0.1:8080".to_string()]),
+        server_urls: Some(default_server_urls()),
         cacert: None,
         cert: None,
         key: None,

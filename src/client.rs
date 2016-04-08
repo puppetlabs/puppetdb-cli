@@ -14,6 +14,8 @@ use super::net::Auth;
 
 #[cfg(feature = "puppet-access")]
 use puppet_access;
+#[cfg(feature = "puppet-access")]
+use std::env;
 
 /// PuppetDB client struct.
 pub struct PdbClient {
@@ -114,7 +116,8 @@ impl PdbClient {
                     }
                 }
             } else {
-                let path = puppet_access::default_token_file();
+                let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+                let path = puppet_access::default_token_path(conf_dir);
                 if !path.is_empty() {
                     match puppet_access::read_token(path.clone()) {
                         Ok(contents) => {
@@ -164,14 +167,11 @@ impl PdbClient {
         let req_body = PdbQueryRequest { query: query_to_json(query_str) }.to_string();
 
         for server_url in self.server_urls.clone() {
-            let mut req = cli.post(&(server_url + "/pdb/query/v4"))
-                             .body(&req_body)
-                             .header(ContentType::json())
-                             .header(Connection::close());
-            if let Some(auth) = Auth::auth_header(&self.auth) {
-                req = req.header(auth)
-            };
-            let res = req.send();
+            let req = cli.post(&(server_url + "/pdb/query/v4"))
+                         .body(&req_body)
+                         .header(ContentType::json())
+                         .header(Connection::close());
+            let res = Auth::auth_header(&self.auth, req).send();
             if res.is_ok() {
                 return res;
             }
@@ -190,12 +190,9 @@ impl PdbClient {
         let cli = Auth::client(&self.auth);
 
         for server_url in self.server_urls.clone() {
-            let mut req = cli.get(&(server_url.clone() + "/status/v1/services"))
+            let req = cli.get(&(server_url.clone() + "/status/v1/services"))
                              .header(Connection::close());
-            if let Some(auth) = Auth::auth_header(&self.auth) {
-                req = req.header(auth)
-            };
-            let res = req.send();
+            let res = Auth::auth_header(&self.auth, req).send();
             map.insert(server_url, build_response_json(res));
         }
         json::Json::Object(map)

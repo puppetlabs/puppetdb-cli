@@ -5,21 +5,19 @@ use openssl::ssl::{SslContext, SslMethod};
 use openssl::ssl::error::SslError;
 use openssl::x509::X509FileType;
 
-use std::result;
 use std::sync::Arc;
 
-use hyper::net::{Openssl, HttpsConnector, Streaming};
-use hyper::Client;
+use hyper::net::{Openssl, HttpsConnector, Fresh};
 use hyper::method::Method;
+use hyper::client::{Client, RequestBuilder};
 use hyper::client::request::Request;
 
-use multipart::client::Multipart;
 use url::Url;
 
 pub fn ssl_context<C>(cacert: C,
                       cert: Option<C>,
                       key: Option<C>)
-                      -> result::Result<Openssl, SslError>
+                      -> Result<Openssl, SslError>
     where C: AsRef<Path>
 {
     let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
@@ -77,30 +75,29 @@ impl Auth {
             &Auth::NoAuth => Client::new(),
         }
     }
-    pub fn multipart(&self, url: Url) -> Multipart<Request<Streaming>> {
-        let request = match self {
-            &Auth::CertAuth{ref cacert, ref cert, ref key} => {
+
+    pub fn request(&self, method: Method, url: Url) -> Request<Fresh> {
+        match self {
+            &Auth::CertAuth{ref cacert, ref cert, ref key } => {
                 let conn = ssl_connector(Path::new(cacert),
                                          Some(Path::new(cert)),
                                          Some(Path::new(key)));
-                Request::with_connector(Method::Post, url, &conn).unwrap()
+                Request::<Fresh>::with_connector(method, url, &conn).unwrap()
             }
-            &Auth::TokenAuth{ref cacert, ref token, .. } => {
+            &Auth::TokenAuth{ref cacert, ref token, ..} => {
                 let conn = ssl_connector(Path::new(cacert), None, None);
-                let mut req = Request::with_connector(Method::Post, url, &conn).unwrap();
+                let mut req = Request::<Fresh>::with_connector(method, url, &conn).unwrap();
                 req.headers_mut().set(XAuthentication(token.clone()));
                 req
             }
-            &Auth::NoAuth => Request::new(Method::Post, url).unwrap(),
-        };
-
-        Multipart::from_request(request).unwrap()
+            &Auth::NoAuth => Request::<Fresh>::new(method, url).unwrap(),
+        }
     }
 
-    pub fn auth_header(&self) -> Option<XAuthentication> {
+    pub fn auth_header<'a>(&self, request_builder: RequestBuilder<'a>) -> RequestBuilder<'a> {
         match self {
-            &Auth::TokenAuth{ ref token, .. } => Some(XAuthentication(token.clone())),
-            _ => None,
+            &Auth::TokenAuth{ ref token, .. } => request_builder.header(XAuthentication(token.clone())),
+            _ => request_builder,
         }
     }
 }

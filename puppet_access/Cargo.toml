@@ -2,7 +2,3 @@
 name = "puppet_access"
 version = "0.1.0"
 authors = ["Andrew Roetker <andrew.roetker@puppetlabs.com>"]
-build = "build.rs"
-
-[dependencies]
-libc = "0.2.*"
