@@ -206,9 +206,7 @@ pdb_query(const PuppetDBConn& conn,
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
 
     const CURLcode curl_code = curl_easy_perform(curl.get());
-    long http_code = 0;
-    curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
-    if (!(http_code == 200 && curl_code == CURLE_OK)) {
+    if (curl_code != CURLE_OK) {
         logging::colorize(nowide::cerr, logging::log_level::fatal);
         nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
         logging::colorize(nowide::cerr);
@@ -229,10 +227,13 @@ pdb_export(const PuppetDBConn& conn,
                                                         fclose);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, fp.get());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, write_data);
+
     nowide::cout << "Exporting PuppetDB..." << endl;
+
     const CURLcode curl_code = curl_easy_perform(curl.get());
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
+
     if (http_code == 200 && curl_code != CURLE_ABORTED_BY_CALLBACK) {
         nowide::cout << "Finished exporting PuppetDB archive to " << path << "." << endl;
     } else {
@@ -263,12 +264,16 @@ pdb_import(const PuppetDBConn& conn,
     long http_code = 0;
     curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &http_code);
 
-    if (http_code == 200 && curl_code == CURLE_OK) {
-      nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
-    } else {
+    if (curl_code != CURLE_OK) {
       logging::colorize(nowide::cerr, logging::log_level::fatal);
       nowide::cerr << "error: " << curl_easy_strerror(curl_code) << endl;
       logging::colorize(nowide::cerr);
+    } else if (http_code != 200) {
+      logging::colorize(nowide::cerr, logging::log_level::fatal);
+      nowide::cerr << "error: failed to upload PuppetDB archive" << endl;
+      logging::colorize(nowide::cerr);
+    } else {
+      nowide::cout << "Finished importing " << infile << " to PuppetDB." << endl;
     }
 
     curl_formfree(formpost);
