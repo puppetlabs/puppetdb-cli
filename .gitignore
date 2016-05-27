@@ -1,2 +1,17 @@
+# Rust
 target
 Cargo.lock
+
+# Misc files
+*.swp
+.DS_Store
+Gemfile.local
+Gemfile.lock
+
+# Beaker
+acceptance/.bundle/
+acceptance/vendor/
+acceptance/junit/
+acceptance/log/
+acceptance/hosts.cfg
+acceptance/tmp/

@@ -1,7 +1,72 @@
 require 'rake/clean'
 
 desc 'Run acceptance tests'
+
+desc "Generate Beaker Host config"
+task :host_config do
+  if ENV["BEAKER_CONFIG"]
+    next
+  end
+  if not ENV['TEST_TARGET']
+    fail "FATAL: must set TEST_TARGET environment variable."
+  end
+
+  generate = "bundle exec beaker-hostgenerator"
+  generate += " --disable-default-role #{ENV['TEST_TARGET']}"
+  generate += " > hosts.cfg"
+  sh generate
+  sh "cat hosts.cfg"
+end
+
+desc 'Check the redis version if Jenkins'
+task :check_redis_pe_ver do
+  if ENV['JENKINS_HOME']
+    if !ENV['BEAKER_PE_VER']
+      ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.2_pe_version`.strip
+    else
+      warn 'BEAKER_PE_VER already set, skipping check with redis'
+    end
+  end
+end
+
+desc "Run beaker based acceptance tests"
+task acceptance: :host_config
+task acceptance: :check_redis_pe_ver if ENV["BEAKER_TYPE"] == 'pe'
 task :acceptance do
-  # TODO: create your real acceptance tests and update this
-  system("beaker --tests tests/fake.rb")
+
+  #fail if SHA not present
+  fail "SHA must be set in order to setup repositories!!!" if !ENV['SHA']
+
+  # hardcode the pe_dir into the repo instead of the jenkins job
+  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.2/ci-ready' if ENV["BEAKER_TYPE"] == 'pe'
+
+  config = ENV["BEAKER_CONFIG"] || 'hosts.cfg'
+  preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
+  type = ENV["BEAKER_TYPE"] || 'foss'
+  keyfile = ENV["BEAKER_KEYFILE"] || "#{ENV['HOME']}/.ssh/id_rsa-acceptance"
+  options_file = ENV["BEAKER_OPTIONSFILE"] || ''
+  test_suite = ENV["BEAKER_TESTSUITE"] || 'tests/'
+  load_path = ENV["BEAKER_LOADPATH"] || ''
+  pre_suite = ENV["BEAKER_PRESUITE"] || "setup/#{type}/pre_suite"
+  helper = ENV["BEAKER_HELPER"] || ''
+  post_suite = ENV["BEAKER_POSTSUITE"] || ''
+  opts = ENV["BEAKER_OPTS"] || ''
+
+  beaker = "bundle exec beaker "
+  beaker += " --xml"
+  beaker += " --debug"
+  beaker += " --no-color"
+  beaker += " --repo-proxy"
+  beaker += " --preserve-hosts #{preserve_hosts}" if preserve_hosts != ''
+  beaker += " --config #{config}" if config != ''
+  beaker += " --helper #{helper}" if helper != ''
+  beaker += " --type #{type}" if type != ''
+  beaker += " --keyfile #{keyfile}" if keyfile != ''
+  beaker += " --options-file #{options_file}" if options_file != ''
+  beaker += " --load-path #{load_path}" if load_path != ''
+  beaker += " --pre-suite #{pre_suite}" if pre_suite != ''
+  beaker += " --post-suite #{post_suite}" if post_suite != ''
+  beaker += " --tests #{test_suite}" if test_suite != ''
+  beaker += " #{opts}" if opts != ''
+  sh beaker
 end
