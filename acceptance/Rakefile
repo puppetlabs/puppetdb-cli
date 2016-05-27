@@ -2,6 +2,12 @@ require 'rake/clean'
 
 desc 'Run acceptance tests'
 task :acceptance do
-  # TODO: create your real acceptance tests and update this
-  system("beaker --tests tests/fake.rb")
+  config = "config/vcloud-ubuntu1204-64mda.cfg"
+  pre_suite = "setup/pre_suite"
+
+  beaker = "beaker --type aio --debug "
+  beaker += "-c #{config} "
+  beaker += "--pre-suite #{pre_suite} "
+  beaker += "--tests tests/fake.rb"
+  system(beaker)
 end
