@@ -1,6 +1,6 @@
 # Defines how cmake should behave, and the minimum version necessary to build.
 cmake_minimum_required(VERSION 3.2.2)
-project(puppetdb-cli VERSION 1.1.0)
+project(puppetdb-cli VERSION 1.0.1)
 
 configure_file("${CMAKE_SOURCE_DIR}/version.in" "${CMAKE_BINARY_DIR}/version")
 
