@@ -1,23 +1,26 @@
 use std::io::Write;
 use std::path::Path;
 
-use openssl::ssl::{SslContext, SslMethod};
+use openssl::ssl::{SslContext, Ssl, SslMethod, SslStream, SSL_VERIFY_PEER};
 use openssl::ssl::error::SslError;
 use openssl::x509::X509FileType;
 
-use std::sync::Arc;
+use openssl_verify;
 
-use hyper::net::{Openssl, HttpsConnector, Fresh};
+use hyper;
+use hyper::net::{HttpsConnector, Fresh, HttpStream};
 use hyper::method::Method;
 use hyper::client::{Client, RequestBuilder};
 use hyper::client::request::Request;
 
 use url::Url;
 
+pub struct OpensslClient(SslContext);
+
 pub fn ssl_context<C>(cacert: C,
                       cert: Option<C>,
                       key: Option<C>)
-                      -> Result<Openssl, SslError>
+                      -> Result<OpensslClient, SslError>
     where C: AsRef<Path>
 {
     let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
@@ -31,10 +34,23 @@ pub fn ssl_context<C>(cacert: C,
     if let Some(key) = key {
         try!(ctx.set_private_key_file(key.as_ref(), X509FileType::PEM));
     };
-    Ok(Openssl { context: Arc::new(ctx) })
+    Ok(OpensslClient(ctx))
 }
 
-pub fn ssl_connector<C>(cacert: C, cert: Option<C>, key: Option<C>) -> HttpsConnector<Openssl>
+impl hyper::net::SslClient for OpensslClient {
+    type Stream = SslStream<HttpStream>;
+
+    fn wrap_client(&self, stream: HttpStream, host: &str) -> hyper::error::Result<Self::Stream> {
+        let mut ssl = try!(Ssl::new(&self.0));
+        try!(ssl.set_hostname(host));
+        let host = host.to_owned();
+        ssl.set_verify_callback(SSL_VERIFY_PEER, move |p, x| openssl_verify::verify_callback(&host, p, x));
+        SslStream::connect(ssl, stream).map_err(From::from)
+    }
+
+}
+
+pub fn ssl_connector<C>(cacert: C, cert: Option<C>, key: Option<C>) -> HttpsConnector<OpensslClient>
     where C: AsRef<Path>
 {
     let ctx = match ssl_context(cacert, cert, key) {

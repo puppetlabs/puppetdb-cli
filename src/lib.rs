@@ -2,6 +2,7 @@ extern crate beautician;
 #[macro_use]
 extern crate hyper;
 extern crate openssl;
+extern crate openssl_verify;
 extern crate url;
 extern crate multipart;
 extern crate rustc_serialize;
