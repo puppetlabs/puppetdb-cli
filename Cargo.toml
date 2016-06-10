@@ -1,6 +1,6 @@
 [package]
 name = "puppetdb"
-version = "1.0.0"
+version = "1.1.0"
 description = "PuppetDB CLI tool in rust."
 readme = "README.md"
 documentation = "http://puppetlabs.github.io/puppetdb-cli/index.html"
@@ -31,6 +31,9 @@ url = "0.5"
 [dependencies.openssl]
 version = "0.7"
 features = ["tlsv1_2"]
+
+[dependencies.openssl-verify]
+version = "0.1"
 
 [dependencies.multipart]
 version = "0.7"
