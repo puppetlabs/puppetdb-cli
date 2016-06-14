@@ -1,0 +1,81 @@
+=head1 NAME
+
+puppetdb_conf - PuppetDB CLI configuration files
+
+=head1 SYNOPSIS
+
+~/.puppetlabs/client-tools/puppetdb.conf
+
+=head1 DESCRIPTION
+
+The `puppet-query` and `puppet-db` commands obtain their configuration from the
+following sources in the following order:
+
+=over 4
+
+=item 1. command-line options
+
+=item 2. ~/.puppetlabs/client-tools/puppetdb.conf
+
+=item 3. hardcoded default PuppetDB url, B<http://127.0.0.1:8080>
+
+=back
+
+The configuration file is in JSON format.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<server_urls>
+
+Either a JSON String (for a single url) or Array (for multiple urls) of your
+PuppetDB servers to query or manage via the CLI commands.
+
+=item B<cacert>
+
+Your site's CA certificate.
+
+=item B<cert>
+
+An SSL certificate signed by your site's Puppet CA.
+
+=item B<key>
+
+The private key for that certificate.
+
+=back
+
+=head1 SEE ALSO
+
+puppet-db(8), puppet-query(8)
+
+=head1 EXAMPLES
+
+    --------------------------------------------------------------------
+    Example #1 - Using a single entry in server_urls:
+
+    {
+        "puppetdb": {
+            "server_urls":"https://alpha-rho.local:8081",
+            "cacert":"<path to ca.pem>",
+            "cert":"<path to cert .pem>",
+            "key":"<path to private-key .pem>"
+        }
+    }
+
+
+    --------------------------------------------------------------------
+    Example #2 - Using multiple server_urls:
+
+    {
+        "puppetdb": {
+            "server_urls":[
+                "https://alpha-rho.local:8081",
+                "https://beta-phi.local:8081"
+            ],
+            "cacert":"<path to ca.pem>",
+            "cert":"<path to cert .pem>",
+            "key":"<path to private-key .pem>"
+        }
+    }
