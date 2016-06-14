@@ -16,6 +16,4 @@ end
 step "Install pe-client-tools." do
   host = master
   install_package(host, 'pe-client-tools')
-  on(host, "/opt/puppetlabs/bin/puppet-query --help")
-  on(host, "/opt/puppetlabs/bin/puppet-query 'nodes{}'")
 end
