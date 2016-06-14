@@ -84,6 +84,4 @@ end
 step "Install puppet-client-tools." do
   host = master
   install_package(host, 'puppet-client-tools')
-  on(host, "/opt/puppetlabs/bin/puppet-query --help")
-  on(host, "/opt/puppetlabs/bin/puppet-query 'nodes{}'")
 end
