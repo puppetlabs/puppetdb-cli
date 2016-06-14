@@ -65,10 +65,7 @@ impl Config {
         } = if !Path::new(&path).exists() {
             default_pdb_config_section()
         } else {
-            match CLIConfig::load(path).puppetdb {
-                Some(section) => section,
-                None => default_pdb_config_section(),
-            }
+            PdbConfigSection::load(path)
         };
 
         // TODO Add tests for Config parsing edge cases
@@ -112,13 +109,8 @@ fn default_pdb_config_section() -> PdbConfigSection {
     }
 }
 
-#[derive(RustcDecodable,RustcEncodable,Debug)]
-pub struct CLIConfig {
-    puppetdb: Option<PdbConfigSection>,
-}
-
-impl CLIConfig {
-    fn load(path: String) -> CLIConfig {
+impl PdbConfigSection {
+    fn load(path: String) -> PdbConfigSection {
         let mut f = File::open(&path).unwrap_or_else(|e| {
             pretty_panic!("Error opening config {:?}: {}", path, e)
         });
@@ -126,7 +118,20 @@ impl CLIConfig {
         if let Err(e) = f.read_to_string(&mut s) {
             pretty_panic!("Error reading from config {:?}: {}", path, e)
         }
-        json::decode(&s).unwrap_or_else(|e| pretty_panic!("Error parsing config {:?}: {}", path, e))
+        let json = json::Json::from_str(&s).unwrap_or_else(|e| pretty_panic!("Error parsing config {:?}: {}", path, e));
+        PdbConfigSection {
+            server_urls:
+            match json.find_path(&["puppetdb", "server_urls"])
+                .unwrap_or(&json::Json::Null) {
+                    &json::Json::Array(ref urls) => Some(urls.into_iter().map(|url| url.as_string().unwrap().to_string()).collect::<Vec<String>>()),
+                    &json::Json::String(ref urls) => Some(split_server_urls(urls.clone())),
+                    &json::Json::Null => Some(default_server_urls()),
+                    _ => pretty_panic!("Error parsing config {:?}: server_urls must be an Array or a String", path),
+                },
+            cacert: json.find_path(&["puppetdb", "cacert"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+            cert: json.find_path(&["puppetdb", "cert"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+            key: json.find_path(&["puppetdb", "key"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+        }
     }
 }
 
@@ -145,6 +150,12 @@ mod test {
         temp_dir.path().join(file_name)
     }
 
+    #[derive(RustcEncodable)]
+    struct CLIConfig {
+        puppetdb: PdbConfigSection,
+    }
+
+
     fn spit_config(file_path: &str, config: &CLIConfig) -> Result<(), Error> {
         let mut f = try!(File::create(file_path));
         try!(f.write_all(json::encode(config).unwrap().as_bytes()));
@@ -154,12 +165,12 @@ mod test {
     #[test]
     fn load_test_all_fields() {
         let config = CLIConfig {
-            puppetdb: Some(PdbConfigSection {
+            puppetdb: PdbConfigSection {
                 server_urls: Some(vec!["http://foo".to_string()]),
                 cacert: Some("foo".to_string()),
                 cert: Some("bar".to_string()),
                 key: Some("baz".to_string()),
-            }),
+            },
         };
 
         let temp_dir = TempDir::new_in("target", "test-").unwrap();
@@ -169,7 +180,7 @@ mod test {
         spit_config(path_str, &config).unwrap();
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
-        let PdbConfigSection{server_urls, cacert, cert, key} = config.puppetdb.unwrap();
+        let PdbConfigSection{server_urls, cacert, cert, key} = config.puppetdb;
         assert_eq!(server_urls.unwrap()[0], slurped_config.server_urls[0]);
         assert_eq!(cacert, slurped_config.cacert);
         assert_eq!(cert, slurped_config.cert);
@@ -183,8 +194,7 @@ mod test {
     }
 
     #[test]
-    fn load_test_only_urls() {
-
+    fn load_test_only_urls_vector() {
         let temp_dir = TempDir::new_in("target", "test-").unwrap();
         let temp_path = create_temp_path(&temp_dir, "testfile.json");
         let path_str = temp_path.as_path().to_str().unwrap();
@@ -195,6 +205,40 @@ mod test {
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
         assert_eq!("http://foo", slurped_config.server_urls[0]);
+        assert_eq!(None, slurped_config.cacert);
+        assert_eq!(None, slurped_config.cert);
+        assert_eq!(None, slurped_config.key);
+    }
+
+    #[test]
+    fn load_test_only_urls_string() {
+        let temp_dir = TempDir::new_in("target", "test-").unwrap();
+        let temp_path = create_temp_path(&temp_dir, "testfile.json");
+        let path_str = temp_path.as_path().to_str().unwrap();
+
+        spit_string(&path_str,
+                    "{\"puppetdb\":{\"server_urls\":\"http://foo,https://localhost:8080\"}}")
+            .unwrap();
+        let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
+
+        assert_eq!(vec!["http://foo","https://localhost:8080"], slurped_config.server_urls);
+        assert_eq!(None, slurped_config.cacert);
+        assert_eq!(None, slurped_config.cert);
+        assert_eq!(None, slurped_config.key);
+    }
+
+    #[test]
+    fn load_test_only_urls_null() {
+        let temp_dir = TempDir::new_in("target", "test-").unwrap();
+        let temp_path = create_temp_path(&temp_dir, "testfile.json");
+        let path_str = temp_path.as_path().to_str().unwrap();
+
+        spit_string(&path_str,
+                    "{\"puppetdb\":{\"server_urls\":null}}")
+            .unwrap();
+        let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
+
+        assert_eq!(vec!["http://127.0.0.1:8080"], slurped_config.server_urls);
         assert_eq!(None, slurped_config.cacert);
         assert_eq!(None, slurped_config.cert);
         assert_eq!(None, slurped_config.key);
