@@ -18,7 +18,11 @@ Gemfile.lock
 /release*/
 /.idea/
 /build/
+
+# Beaker
 acceptance/.bundle/
 acceptance/vendor/
 acceptance/junit/
 acceptance/log/
+acceptance/hosts.cfg
+acceptance/tmp/
