@@ -24,7 +24,7 @@ pub fn ssl_context<C>(cacert: C,
     where C: AsRef<Path>
 {
     let mut ctx = SslContext::new(SslMethod::Tlsv1_2).unwrap();
-    try!(ctx.set_cipher_list("DEFAULT"));
+    try!(ctx.set_cipher_list("DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-RSA-CAMELLIA128-SHA:DHE-RSA-AES128-SHA:DHE-RSA-CAMELLIA256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:CAMELLIA128-SHA:AES128-SHA:!aNULL:!eNULL:!EXPORT:!DES:!3DES:!RC4:!MD5"));
     try!(ctx.set_CA_file(cacert.as_ref()));
     // TODO should validate both key and cert are set when either one is
     // specified
