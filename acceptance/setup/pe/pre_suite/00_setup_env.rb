@@ -1,5 +1,24 @@
 # Taken from puppet-access acceptance tests (blame RE-1990)
 # Taken from puppet acceptance lib
+def fetch(base_url, file_name, dst_dir)
+  FileUtils.makedirs(dst_dir)
+  src = "#{base_url}/#{file_name}"
+  dst = File.join(dst_dir, file_name)
+  if File.exists?(dst)
+    logger.notify "Already fetched #{dst}"
+  else
+    logger.notify "Fetching: #{src}"
+    logger.notify "  and saving to #{dst}"
+    open(src) do |remote|
+      File.open(dst, "w") do |file|
+        FileUtils.copy_stream(remote, file)
+      end
+    end
+  end
+  return dst
+end
+
+# Taken from puppet acceptance lib
 # Install development repos
 def install_dev_repos_on(package, host, sha, repo_configs_dir)
   platform = host['platform'] =~ /^(debian|ubuntu)/ ? host['platform'].with_version_codename : host['platform']
