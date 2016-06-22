@@ -97,7 +97,9 @@ The Rust PuppetDB CLI accepts a `--config=<path_to_config>` flag which allows
 you to configure your ssl credentials and the location of your PuppetDB.
 
 By default the tool will use `$HOME/.puppetlabs/client-tools/puppetdb.conf` as
-it's configuration file if it exists.
+it's configuration file if it exists. You can also configure a global
+configuration (for all users) in `/etc/puppetlabs/client-tools/puppetdb.conf` to
+fall back to if the per-user configuration is not present.
 
 The format of the config file can be deduced from the following example.
 

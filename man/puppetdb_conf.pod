@@ -17,7 +17,9 @@ following sources in the following order:
 
 =item 2. ~/.puppetlabs/client-tools/puppetdb.conf
 
-=item 3. hardcoded default PuppetDB url, B<http://127.0.0.1:8080>
+=item 3. /etc/puppetlabs/client-tools/puppetdb.conf
+
+=item 4. hardcoded default PuppetDB url, B<http://127.0.0.1:8080>
 
 =back
 

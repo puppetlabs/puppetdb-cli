@@ -15,6 +15,13 @@ pub fn default_config_path(mut home_dir: PathBuf) -> String {
     home_dir.to_str().unwrap().to_owned()
 }
 
+pub fn global_config_path() -> String {
+    let mut path = PathBuf::from("/etc/puppetlabs/client-tools");
+    path.push("puppetdb");
+    path.set_extension("conf");
+    path.to_str().unwrap().to_owned()
+}
+
 fn split_server_urls(urls: String) -> Vec<String> {
     urls.split(",").map(|u| u.trim().to_string()).collect()
 }
@@ -35,6 +42,15 @@ pub struct Config {
     pub token: Option<String>,
 }
 
+pub fn merge_configs(first: PdbConfigSection, second: PdbConfigSection) -> PdbConfigSection {
+    PdbConfigSection {
+        server_urls: second.server_urls.or(first.server_urls),
+        cacert: second.cacert.or(first.cacert),
+        cert: second.cert.or(first.cert),
+        key: second.key.or(first.key),
+    }
+}
+
 impl Config {
     pub fn load(path: String,
                 urls: Option<String>,
@@ -44,12 +60,20 @@ impl Config {
                 token: Option<String>)
                 -> Config {
 
+        let server_urls =  urls.and_then(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                Some(s)
+            }
+        }).and_then(|s| Some(split_server_urls(s)));
+
         // TODO Don't parse config if urls aren't HTTP. This is trivial but it
         // would be best to merge the other auth validation code when
         // constructing the client with this.
-        if urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
+        if server_urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
             return Config {
-                server_urls: split_server_urls(urls.unwrap()),
+                server_urls: server_urls.unwrap(),
                 cacert: cacert,
                 cert: cert,
                 key: key,
@@ -57,32 +81,22 @@ impl Config {
             };
         }
 
-        let PdbConfigSection {
-            server_urls: cfg_urls,
-            cacert: cfg_cacert,
-            cert: cfg_cert,
-            key: cfg_key,
-        } = if !Path::new(&path).exists() {
-            default_pdb_config_section()
-        } else {
-            PdbConfigSection::load(path)
+        let file_configs = merge_configs(PdbConfigSection::load(global_config_path()),
+                                         PdbConfigSection::load(path));
+        let flags_config = PdbConfigSection {
+            server_urls: server_urls,
+            cacert: cacert,
+            cert: cert,
+            key: key,
         };
+        let cfg = merge_configs(file_configs, flags_config);
 
         // TODO Add tests for Config parsing edge cases
         Config {
-            server_urls: urls.and_then(|s| {
-                                 if s.is_empty() {
-                                     None
-                                 } else {
-                                     Some(s)
-                                 }
-                             })
-                             .and_then(|s| Some(split_server_urls(s)))
-                             .or(cfg_urls)
-                             .unwrap_or(default_server_urls()),
-            cacert: cacert.or(cfg_cacert),
-            cert: cert.or(cfg_cert),
-            key: key.or(cfg_key),
+            server_urls: cfg.server_urls.unwrap_or(default_server_urls()),
+            cacert: cfg.cacert,
+            cert: cfg.cert,
+            key: cfg.key,
             token: token,
         }
     }
@@ -100,9 +114,9 @@ fn default_server_urls() -> Vec<String> {
     vec!["http://127.0.0.1:8080".to_string()]
 }
 
-fn default_pdb_config_section() -> PdbConfigSection {
+fn empty_pdb_config_section() -> PdbConfigSection {
     PdbConfigSection {
-        server_urls: Some(default_server_urls()),
+        server_urls: None,
         cacert: None,
         cert: None,
         key: None,
@@ -111,6 +125,9 @@ fn default_pdb_config_section() -> PdbConfigSection {
 
 impl PdbConfigSection {
     fn load(path: String) -> PdbConfigSection {
+        if !Path::new(&path).exists() {
+            return empty_pdb_config_section();
+        }
         let mut f = File::open(&path).unwrap_or_else(|e| {
             pretty_panic!("Error opening config {:?}: {}", path, e)
         });
@@ -125,7 +142,7 @@ impl PdbConfigSection {
                 .unwrap_or(&json::Json::Null) {
                     &json::Json::Array(ref urls) => Some(urls.into_iter().map(|url| url.as_string().unwrap().to_string()).collect::<Vec<String>>()),
                     &json::Json::String(ref urls) => Some(split_server_urls(urls.clone())),
-                    &json::Json::Null => Some(default_server_urls()),
+                    &json::Json::Null => None,
                     _ => pretty_panic!("Error parsing config {:?}: server_urls must be an Array or a String", path),
                 },
             cacert: json.find_path(&["puppetdb", "cacert"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
