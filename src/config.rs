@@ -15,12 +15,21 @@ pub fn default_config_path(mut home_dir: PathBuf) -> String {
     home_dir.to_str().unwrap().to_owned()
 }
 
+#[cfg(not(windows))]
 pub fn global_config_path() -> String {
     let mut path = PathBuf::from("/etc/puppetlabs/client-tools");
     path.push("puppetdb");
     path.set_extension("conf");
     path.to_str().unwrap().to_owned()
 }
+#[cfg(windows)]
+pub fn global_config_path() -> String {
+    let mut path = PathBuf::from("C:\\ProgramData\\PuppetLabs\\client-tools");
+    path.push("puppetdb");
+    path.set_extension("conf");
+    path.to_str().unwrap().to_owned()
+}
+
 
 fn split_server_urls(urls: String) -> Vec<String> {
     urls.split(",").map(|u| u.trim().to_string()).collect()
@@ -60,13 +69,14 @@ impl Config {
                 token: Option<String>)
                 -> Config {
 
-        let server_urls =  urls.and_then(|s| {
-            if s.is_empty() {
-                None
-            } else {
-                Some(s)
-            }
-        }).and_then(|s| Some(split_server_urls(s)));
+        let server_urls = urls.and_then(|s| {
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s)
+                }
+            })
+            .and_then(|s| Some(split_server_urls(s)));
 
         // TODO Don't parse config if urls aren't HTTP. This is trivial but it
         // would be best to merge the other auth validation code when
@@ -128,26 +138,36 @@ impl PdbConfigSection {
         if !Path::new(&path).exists() {
             return empty_pdb_config_section();
         }
-        let mut f = File::open(&path).unwrap_or_else(|e| {
-            pretty_panic!("Error opening config {:?}: {}", path, e)
-        });
+        let mut f = File::open(&path)
+            .unwrap_or_else(|e| pretty_panic!("Error opening config {:?}: {}", path, e));
         let mut s = String::new();
         if let Err(e) = f.read_to_string(&mut s) {
             pretty_panic!("Error reading from config {:?}: {}", path, e)
         }
-        let json = json::Json::from_str(&s).unwrap_or_else(|e| pretty_panic!("Error parsing config {:?}: {}", path, e));
+        let json = json::Json::from_str(&s)
+            .unwrap_or_else(|e| pretty_panic!("Error parsing config {:?}: {}", path, e));
         PdbConfigSection {
-            server_urls:
-            match json.find_path(&["puppetdb", "server_urls"])
+            server_urls: match json.find_path(&["puppetdb", "server_urls"])
                 .unwrap_or(&json::Json::Null) {
-                    &json::Json::Array(ref urls) => Some(urls.into_iter().map(|url| url.as_string().unwrap().to_string()).collect::<Vec<String>>()),
-                    &json::Json::String(ref urls) => Some(split_server_urls(urls.clone())),
-                    &json::Json::Null => None,
-                    _ => pretty_panic!("Error parsing config {:?}: server_urls must be an Array or a String", path),
-                },
-            cacert: json.find_path(&["puppetdb", "cacert"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
-            cert: json.find_path(&["puppetdb", "cert"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
-            key: json.find_path(&["puppetdb", "key"]).and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+                &json::Json::Array(ref urls) => {
+                    Some(urls.into_iter()
+                        .map(|url| url.as_string().unwrap().to_string())
+                        .collect::<Vec<String>>())
+                }
+                &json::Json::String(ref urls) => Some(split_server_urls(urls.clone())),
+                &json::Json::Null => None,
+                _ => {
+                    pretty_panic!("Error parsing config {:?}: server_urls must be an Array or a \
+                                   String",
+                                  path)
+                }
+            },
+            cacert: json.find_path(&["puppetdb", "cacert"])
+                .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+            cert: json.find_path(&["puppetdb", "cert"])
+                .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+            key: json.find_path(&["puppetdb", "key"])
+                .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
         }
     }
 }
@@ -197,7 +217,7 @@ mod test {
         spit_config(path_str, &config).unwrap();
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
-        let PdbConfigSection{server_urls, cacert, cert, key} = config.puppetdb;
+        let PdbConfigSection { server_urls, cacert, cert, key } = config.puppetdb;
         assert_eq!(server_urls.unwrap()[0], slurped_config.server_urls[0]);
         assert_eq!(cacert, slurped_config.cacert);
         assert_eq!(cert, slurped_config.cert);
@@ -238,7 +258,8 @@ mod test {
             .unwrap();
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
-        assert_eq!(vec!["http://foo","https://localhost:8080"], slurped_config.server_urls);
+        assert_eq!(vec!["http://foo", "https://localhost:8080"],
+                   slurped_config.server_urls);
         assert_eq!(None, slurped_config.cacert);
         assert_eq!(None, slurped_config.cert);
         assert_eq!(None, slurped_config.key);
@@ -250,9 +271,7 @@ mod test {
         let temp_path = create_temp_path(&temp_dir, "testfile.json");
         let path_str = temp_path.as_path().to_str().unwrap();
 
-        spit_string(&path_str,
-                    "{\"puppetdb\":{\"server_urls\":null}}")
-            .unwrap();
+        spit_string(&path_str, "{\"puppetdb\":{\"server_urls\":null}}").unwrap();
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
         assert_eq!(vec!["http://127.0.0.1:8080"], slurped_config.server_urls);

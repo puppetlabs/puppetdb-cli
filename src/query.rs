@@ -49,8 +49,8 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE)
-                         .and_then(|d| d.decode())
-                         .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
     if args.flag_version {
         println!("puppet-query v{}", VERSION.unwrap_or("unknown"));
         return;
@@ -71,8 +71,8 @@ fn main() {
                                       args.flag_token);
 
     let mut resp = client::PdbClient::new(config)
-                       .query(args.arg_query.unwrap())
-                       .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
+        .query(args.arg_query.unwrap())
+        .unwrap_or_else(|e| pretty_panic!("Failed to connect to server: {}", e));
 
     utils::assert_status_ok(&mut resp);
 
