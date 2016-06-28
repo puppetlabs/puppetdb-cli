@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.0.1] - 2016-06-28
+
+### Fixed
+
+- (PDB-2748) Fix incompatibility between puppet-agent 1.5 and puppet-client-tools 
+- (PDB-2653) Do not display `no error found` for bad requests
+
 ## [1.0.0] - 2016-04-07
 
 ### Summary
