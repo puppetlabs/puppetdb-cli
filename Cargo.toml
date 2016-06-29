@@ -28,6 +28,15 @@ docopt = "0.6"
 rustc-serialize = "0.3"
 url = "0.5"
 
+[target."cfg(windows)".dependencies]
+winapi = "0.2.4"
+winreg = "0.3.2"
+shell32-sys = "0.1.1"
+ole32-sys = "0.2.0"
+kernel32-sys = "0.2.1"
+advapi32-sys = "0.2.0"
+userenv-sys = "0.2.0"
+
 [dependencies.openssl]
 version = "0.7"
 features = ["tlsv1_2"]

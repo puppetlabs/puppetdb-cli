@@ -22,9 +22,15 @@ pub fn global_config_path() -> String {
     path.set_extension("conf");
     path.to_str().unwrap().to_owned()
 }
+
+#[cfg(windows)]
+use windows;
+
 #[cfg(windows)]
 pub fn global_config_path() -> String {
-    let mut path = PathBuf::from("C:\\ProgramData\\PuppetLabs\\client-tools");
+    let mut path = windows::get_special_folder(&windows::FOLDERID_ProgramData).unwrap();
+    path.push("PuppetLabs");
+    path.push("client-tools");
     path.push("puppetdb");
     path.set_extension("conf");
     path.to_str().unwrap().to_owned()
