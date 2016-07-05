@@ -38,7 +38,7 @@ task :acceptance do
   fail "SHA must be set in order to setup repositories!!!" if !ENV['SHA']
 
   # hardcode the pe_dir into the repo instead of the jenkins job
-  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.2/ci-ready' if ENV["BEAKER_TYPE"] == 'pe'
+  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.3/ci-ready' if ENV["BEAKER_TYPE"] == 'pe'
 
   config = ENV["BEAKER_CONFIG"] || 'hosts.cfg'
   preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
