@@ -22,7 +22,7 @@ desc 'Check the redis version if Jenkins'
 task :check_redis_pe_ver do
   if ENV['JENKINS_HOME']
     if !ENV['BEAKER_PE_VER']
-      ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.2_pe_version`.strip
+      ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.3_pe_version`.strip
     else
       warn 'BEAKER_PE_VER already set, skipping check with redis'
     end
