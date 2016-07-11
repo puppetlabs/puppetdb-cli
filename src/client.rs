@@ -29,12 +29,12 @@ pub struct PdbClient {
 /// has `https` as the scheme.
 fn is_ssl(server_urls: &Vec<String>) -> bool {
     server_urls.into_iter()
-               .any(|url| {
-                   "https" ==
-                   Url::parse(&url)
-                       .unwrap_or_else(|e| pretty_panic!("Error parsing url {:?}: {}", url, e))
-                       .scheme
-               })
+        .any(|url| {
+            "https" ==
+            Url::parse(&url)
+                .unwrap_or_else(|e| pretty_panic!("Error parsing url {:?}: {}", url, e))
+                .scheme
+        })
 }
 
 impl PdbClient {
@@ -152,8 +152,7 @@ impl PdbClient {
                 } else {
                     Err(io::Error::new(io::ErrorKind::Other,
                                        "unable to set default token path, \
-                                        please use the `--token` option directly"
-                    ))
+                                        please use the `--token` option directly"))
                 }
             }
         }
@@ -168,9 +167,9 @@ impl PdbClient {
 
         for server_url in self.server_urls.clone() {
             let req = cli.post(&(server_url + "/pdb/query/v4"))
-                         .body(&req_body)
-                         .header(ContentType::json())
-                         .header(Connection::close());
+                .body(&req_body)
+                .header(ContentType::json())
+                .header(Connection::close());
             let res = Auth::auth_header(&self.auth, req).send();
             if res.is_ok() {
                 return res;
@@ -191,7 +190,7 @@ impl PdbClient {
 
         for server_url in self.server_urls.clone() {
             let req = cli.get(&(server_url.clone() + "/status/v1/services"))
-                             .header(Connection::close());
+                .header(Connection::close());
             let res = Auth::auth_header(&self.auth, req).send();
             map.insert(server_url, build_response_json(res));
         }
