@@ -66,7 +66,7 @@ $ puppet-query 'nodes[certname]{}'
     "certname" : "foo.example.com"
   }
 ]
-$ puppet-db status
+$ puppet-db status # Note `puppet-db status` will be released in puppet-client-tools 1.1.0
 {
   "puppetdb-status": {
     "service_version": "4.0.0-SNAPSHOT",
@@ -118,8 +118,3 @@ The format of the config file can be deduced from the following example.
     }
   }
 ```
-
-## TODO
-
-- [ ] Add `--log-level` and `--silent` options
-- [ ] Add testing for all the things

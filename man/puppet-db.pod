@@ -70,6 +70,12 @@ Overrides the path for the Puppet client private key.
       The import action will import a PuppetDB archive to PuppetDB. You must
       specify the location of the archive to the import action as a path.
 
+  $ puppet-db status
+      The status action will query the PuppetDB status endpoint (for each
+      configured PuppetDB) and return a map from PuppetDB host to the status for
+      that PuppetDB. For more information about the PuppetDB status endpoint
+      see: [https://docs.puppet.com/puppetdb/latest/api/status/v1/status.html]
+
 =head1 SEE ALSO
 
 puppet-db(8), puppetdb_conf(8)
@@ -89,3 +95,29 @@ puppet-db(8), puppetdb_conf(8)
     $ puppet-db import ./my-pdb-export.tgz
     Importing ./my-pdb-export.tgz to PuppetDB...
     Finished importing ./my-pdb-export.tgz to PuppetDB.
+
+    --------------------------------------------------------------------
+    Example #3 - Query for the status of PuppetDB:
+
+    $ puppet-db status
+    {
+      "puppetdb-status": {
+        "service_version": "4.0.0-SNAPSHOT",
+        "service_status_version": 1,
+        "detail_level": "info",
+        "state": "running",
+        "status": {
+          "maintenance_mode?": false,
+          "queue_depth": 0,
+          "read_db_up?": true,
+          "write_db_up?": true
+        }
+      },
+      "status-service": {
+        "service_version": "0.3.1",
+        "service_status_version": 1,
+        "detail_level": "info",
+        "state": "running",
+        "status": {}
+      }
+    }
