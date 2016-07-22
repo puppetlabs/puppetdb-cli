@@ -66,7 +66,7 @@ $ puppet-query 'nodes[certname]{}'
     "certname" : "foo.example.com"
   }
 ]
-$ puppet-db status # Note `puppet-db status` will be released in puppet-client-tools 1.1.0
+$ puppet-db status
 {
   "puppetdb-status": {
     "service_version": "4.0.0-SNAPSHOT",
