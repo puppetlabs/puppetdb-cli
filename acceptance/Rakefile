@@ -1,5 +1,9 @@
 require 'rake/clean'
 
+# Default test target if none specified
+DEFAULT_MASTER_TEST_TARGET = 'redhat7-64mdca'
+DEFAULT_TEST_TARGETS = "#{DEFAULT_MASTER_TEST_TARGET}-windows2012r2-64client."
+
 desc 'Run acceptance tests'
 
 desc "Generate Beaker Host config"
@@ -7,12 +11,16 @@ task :host_config do
   if ENV["BEAKER_CONFIG"]
     next
   end
-  if not ENV['TEST_TARGET']
-    fail "FATAL: must set TEST_TARGET environment variable."
+
+  if client_target = ENV['TEST_TARGET']
+    master_target = ENV['MASTER_TEST_TARGET'] || DEFAULT_MASTER_TEST_TARGET
+    targets = "#{master_target}-#{client_target}client."
+  else
+    targets = DEFAULT_TEST_TARGETS
   end
 
   generate = "bundle exec beaker-hostgenerator"
-  generate += " --disable-default-role #{ENV['TEST_TARGET']}"
+  generate += " --disable-default-role #{targets}"
   generate += " > hosts.cfg"
   sh generate
   sh "cat hosts.cfg"
@@ -20,12 +28,10 @@ end
 
 desc 'Check the redis version if Jenkins'
 task :check_redis_pe_ver do
-  if ENV['JENKINS_HOME']
-    if !ENV['BEAKER_PE_VER']
-      ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.3_pe_version`.strip
-    else
-      warn 'BEAKER_PE_VER already set, skipping check with redis'
-    end
+  if !ENV['BEAKER_PE_VER']
+    ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.3_pe_version`.strip
+  else
+    warn 'BEAKER_PE_VER already set, skipping check with redis'
   end
 end
 
@@ -45,9 +51,9 @@ task :acceptance do
   type = ENV["BEAKER_TYPE"] || 'foss'
   keyfile = ENV["BEAKER_KEYFILE"] || "#{ENV['HOME']}/.ssh/id_rsa-acceptance"
   options_file = ENV["BEAKER_OPTIONSFILE"] || ''
-  test_suite = ENV["BEAKER_TESTSUITE"] || 'tests/'
+  test_suite = ENV["BEAKER_TESTSUITE"] || "#{type}/tests/"
   load_path = ENV["BEAKER_LOADPATH"] || ''
-  pre_suite = ENV["BEAKER_PRESUITE"] || "setup/#{type}/pre_suite"
+  pre_suite = ENV["BEAKER_PRESUITE"] || "#{type}/setup/pre_suite"
   helper = ENV["BEAKER_HELPER"] || ''
   post_suite = ENV["BEAKER_POSTSUITE"] || ''
   opts = ENV["BEAKER_OPTS"] || ''

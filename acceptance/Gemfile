@@ -12,6 +12,10 @@ end
 
 gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || "~> 0.2")
 gem "beaker", *location_for(ENV['BEAKER_VERSION'] || '~> 2.8')
+if ENV["BEAKER_TYPE"] == 'pe'
+  gem 'beaker-pe', '~> 0.8'
+  gem 'scooter', '~> 3.2', :require => false
+end
 gem 'rake', "~> 10.1"
 
 if File.exists? "#{__FILE__}.local"
