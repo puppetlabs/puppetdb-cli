@@ -4,13 +4,14 @@ use std::collections::BTreeMap;
 
 use hyper;
 use hyper::error;
-use hyper::header::{Connection, ContentType};
+use hyper::header::{Connection, ContentType, UserAgent};
 
 use url::Url;
 
 use super::config::Config;
 use super::utils::HyperResult;
 use super::net::Auth;
+
 
 #[cfg(feature = "puppet-access")]
 use puppet_access;
@@ -116,7 +117,7 @@ impl PdbClient {
                     }
                 }
             } else {
-                let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+                let conf_dir = super::utils::home_dir();
                 let path = puppet_access::default_token_path(conf_dir);
                 if !path.is_empty() {
                     match puppet_access::read_token(path.clone()) {
@@ -168,6 +169,7 @@ impl PdbClient {
         for server_url in self.server_urls.clone() {
             let req = cli.post(&(server_url + "/pdb/query/v4"))
                 .body(&req_body)
+                .header(UserAgent("puppetdb-cli".to_owned()))
                 .header(ContentType::json())
                 .header(Connection::close());
             let res = Auth::auth_header(&self.auth, req).send();
@@ -190,6 +192,7 @@ impl PdbClient {
 
         for server_url in self.server_urls.clone() {
             let req = cli.get(&(server_url.clone() + "/status/v1/services"))
+                .header(UserAgent("puppetdb-cli".to_owned()))
                 .header(Connection::close());
             let res = Auth::auth_header(&self.auth, req).send();
             map.insert(server_url, build_response_json(res));
