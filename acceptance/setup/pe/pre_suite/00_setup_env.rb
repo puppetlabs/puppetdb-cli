@@ -86,4 +86,5 @@ end
 step "Install pe-client-tools." do
   host = master
   install_package(host, 'pe-client-tools')
+  on(host, 'rm -rf /etc/puppetlabs/client-tools/puppetdb.conf')
 end
