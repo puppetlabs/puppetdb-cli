@@ -7,7 +7,7 @@ pub fn read_token(path: String) -> io::Result<String> {
     let mut f = try!(File::open(&path));
     let mut s = String::new();
     try!(f.read_to_string(&mut s));
-    Ok(s)
+    Ok(s.trim().to_owned())
 }
 
 /// Given a `home_dir` (e.g. from `std::env::home_dir()`), returns the default
