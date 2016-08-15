@@ -59,7 +59,7 @@ fn main() {
     let path = if let Some(cfg_path) = args.flag_config {
         cfg_path
     } else {
-        let conf_dir = env::home_dir().expect("$HOME directory is not configured");
+        let conf_dir = utils::home_dir();
         config::default_config_path(conf_dir)
     };
 

@@ -1,5 +1,7 @@
 use hyper;
 use std::io::{Read, Write};
+use std::env;
+use std::path::PathBuf;
 
 /// Like `println!` but for stderr.
 #[macro_export]
@@ -35,6 +37,17 @@ pub fn assert_status_ok(response: &mut HyperResponse) {
         if let Err(x) = response.read_to_string(&mut temp) {
             panic!("Unable to read response from server: {}", x);
         }
-        pretty_panic!("Error response from server: {}", temp)
+        pretty_panic!("Error response {} from server: {}", response.status, temp)
     }
+}
+
+#[cfg(windows)]
+pub fn home_dir() -> PathBuf {
+    env::remove_var("HOME".to_string());
+    env::home_dir().expect("$USERPROFILE directory is not configured")
+}
+
+#[cfg(not(windows))]
+pub fn home_dir() -> PathBuf {
+    env::home_dir().expect("$HOME directory is not configured")
 }
