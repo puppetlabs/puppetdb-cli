@@ -2,7 +2,7 @@ use std::io::Write;
 use url::Url;
 
 use multipart::client::Multipart;
-use hyper::header::Connection;
+use hyper::header::{Connection, UserAgent};
 use hyper::method::Method;
 
 use super::client::PdbClient;
@@ -29,6 +29,7 @@ pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> HyperResult 
 
     let req = cli.get(&(server_url + "/pdb/admin/v1/archive"))
         .body(&body)
+        .header(UserAgent("puppetdb-cli".to_owned()))
         .header(Connection::close());
     Auth::auth_header(&pdb_client.auth, req).send()
 }
