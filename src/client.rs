@@ -164,7 +164,7 @@ impl PdbClient {
 
         let cli = Auth::client(&self.auth);
 
-        let req_body = PdbQueryRequest { query: query_to_json(query_str) }.to_string();
+        let req_body = PdbQueryRequest { query: query_to_json(query_str), pretty: true}.to_string();
 
         for server_url in self.server_urls.clone() {
             let req = cli.post(&(server_url + "/pdb/query/v4"))
@@ -325,6 +325,7 @@ fn with_auth_works() {
 #[derive(RustcEncodable)]
 struct PdbQueryRequest {
     query: json::Json,
+    pretty: bool,
 }
 
 /// A helper struct to make encoding the json for a PDB query request body
