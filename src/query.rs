@@ -1,12 +1,10 @@
 extern crate rustc_serialize;
 extern crate docopt;
-extern crate beautician;
 extern crate hyper;
 
 #[macro_use]
 extern crate puppetdb;
 
-use std::env;
 use std::io::{self, Write};
 
 use puppetdb::client;
@@ -78,7 +76,5 @@ fn main() {
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    beautician::prettify(&mut resp, &mut handle)
-        .ok()
-        .expect("failed to write response");
+    io::copy(&mut resp, &mut handle).ok().expect("failed to write response");
 }
