@@ -1,4 +1,3 @@
-extern crate beautician;
 #[macro_use]
 extern crate hyper;
 extern crate openssl;

@@ -18,11 +18,11 @@ pod2man_helper() {
     pod2man --section 8 --release \
             --center "$center" \
             --name "$manfile" \
-            "man/${manfile}.pod" "${outpath}/share/man/${manfile}.8"
+            "man/${manfile}.pod" "${outpath}/share/man/man8/${manfile}.8"
 }
 
 outpath="$1"
-mkdir -p "${outpath}/share/man"
+mkdir -p "${outpath}/share/man/man8"
 pod2man_helper "puppet-db" "$outpath" "manages PuppetDB administrative tasks"
 pod2man_helper "puppet-query" "$outpath" "queries PuppetDB data"
 pod2man_helper "puppetdb_conf" "$outpath" "PuppetDB CLI configuration"
