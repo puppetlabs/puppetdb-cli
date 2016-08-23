@@ -11,12 +11,13 @@ def location_for(place, fake_version = nil)
 end
 
 gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || "~> 0.2")
-gem "beaker", *location_for(ENV['BEAKER_VERSION'] || '~> 2.8')
+gem "beaker", '~> 2.5'
 if ENV["BEAKER_TYPE"] == 'pe'
   gem 'beaker-pe', '~> 0.8'
   gem 'scooter', '~> 3.2', :require => false
 end
 gem 'rake', "~> 10.1"
+gem 'rototiller', '= 0.1.0'
 
 if File.exists? "#{__FILE__}.local"
     eval(File.read("#{__FILE__}.local"), binding)
