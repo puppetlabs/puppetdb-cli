@@ -12,16 +12,12 @@ task :host_config do
   if ENV["BEAKER_CONFIG"]
     next
   end
-
-  if client_target = ENV['TEST_TARGET']
-    master_target = ENV['MASTER_TEST_TARGET'] || DEFAULT_MASTER_TEST_TARGET
-    targets = "#{master_target}-#{client_target}client."
-  else
-    targets = DEFAULT_TEST_TARGETS
+  if not ENV['TEST_TARGET']
+    fail "FATAL: must set TEST_TARGET environment variable."
   end
 
   generate = "bundle exec beaker-hostgenerator"
-  generate += " --disable-default-role #{targets}"
+  generate += " --disable-default-role #{ENV['TEST_TARGET']}"
   generate += " > hosts.cfg"
   sh generate
   sh "cat hosts.cfg"
