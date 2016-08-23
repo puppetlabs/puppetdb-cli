@@ -47,12 +47,8 @@ task :acceptance do
   preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
   type = ENV["BEAKER_TYPE"] || 'foss'
   keyfile = ENV["BEAKER_KEYFILE"] || "#{ENV['HOME']}/.ssh/id_rsa-acceptance"
-  options_file = ENV["BEAKER_OPTIONSFILE"] || ''
   test_suite = ENV["BEAKER_TESTSUITE"] || "#{type}/tests/"
-  load_path = ENV["BEAKER_LOADPATH"] || ''
   pre_suite = ENV["BEAKER_PRESUITE"] || "#{type}/setup/pre_suite"
-  helper = ENV["BEAKER_HELPER"] || ''
-  post_suite = ENV["BEAKER_POSTSUITE"] || ''
   opts = ENV["BEAKER_OPTS"] || ''
 
   beaker = "bundle exec beaker "
@@ -60,16 +56,12 @@ task :acceptance do
   beaker += " --debug"
   beaker += " --no-color"
   beaker += " --repo-proxy"
-  beaker += " --preserve-hosts #{preserve_hosts}" if preserve_hosts != ''
   beaker += " --config #{config}" if config != ''
-  beaker += " --helper #{helper}" if helper != ''
+  beaker += " --preserve-hosts #{preserve_hosts}" if preserve_hosts != ''
   beaker += " --type #{type}" if type != ''
   beaker += " --keyfile #{keyfile}" if keyfile != ''
-  beaker += " --options-file #{options_file}" if options_file != ''
-  beaker += " --load-path #{load_path}" if load_path != ''
-  beaker += " --pre-suite #{pre_suite}" if pre_suite != ''
-  beaker += " --post-suite #{post_suite}" if post_suite != ''
   beaker += " --tests #{test_suite}" if test_suite != ''
+  beaker += " --pre-suite #{pre_suite}" if pre_suite != ''
   beaker += " #{opts}" if opts != ''
   sh beaker
 end
@@ -85,12 +77,10 @@ namespace :ci do
           {:name => '--no-color', :is_boolean => true},
           {:name => '--debug', :is_boolean => true},
           {:name => '--hosts', :override_env => 'TEST_TARGET'},
-          {:name => '--helper', :default => 'helper.rb'},
+          {:name => '--preserve-hosts', :default => 'onfail', :override_env => 'BEAKER_PRESERVEHOSTS'},
           {:name => '--keyfile', :default => "#{ENV['HOME']}/.ssh/id_rsa-acceptance", :override_env => 'BEAKER_KEYFILE'},
-          {:name => '--load-path', :default => 'lib', :override_env => 'BEAKER_LOADPATH'},
           {:name => '--pre-suite', :default => 'pe/setup/pre_suite', :override_env => 'BEAKER_PRESUITE'},
           {:name => '--tests', :default => 'pe/tests', :override_env => 'BEAKER_TESTSUITE'},
-          {:name => '--preserve-hosts', :default => 'onfail', :override_env => 'BEAKER_PRESERVEHOSTS'},
       ]
 
       t.add_flag(*flags)
