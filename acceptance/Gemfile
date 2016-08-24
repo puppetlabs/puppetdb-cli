@@ -2,7 +2,7 @@ source ENV['GEM_SOURCE'] || "https://rubygems.org"
 
 gem "beaker-hostgenerator", "~> 0.2"
 gem "beaker", '~> 2.5'
-if ENV["BEAKER_TYPE"] == 'pe'
+unless ENV["BEAKER_TYPE"] == 'foss'
   gem 'beaker-pe', '~> 0.9'
   gem 'scooter', '~> 3.2', :require => false
 end

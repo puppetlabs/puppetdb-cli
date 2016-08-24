@@ -7,13 +7,10 @@ require 'json'
 # +string+ - path of ca file or nil on fail
 def copy_ca_from_master_to(host)
   ca_pem_contents = on(master, 'cat /etc/puppetlabs/puppet/ssl/certs/ca.pem').stdout.chomp
-  if (host.platform =~ /win/)
-    ca_pem_location       = ['C:', 'Windows', 'Temp', 'ca.pem'].join('\\')
-  else
-    ca_pem_location       = ['/tmp', 'ca.pem'].join('/')
-  end
-  res = create_remote_file(host, ca_pem_location, ca_pem_contents) unless master.hostname == host.hostname
-  return res.exit_code == 0 ? ca_pem_location : nil
+  path_seperator = (host.platform =~ /win/) ? '\\' : '/'
+  ca_pem_location = host.system_temp_path << path_seperator << 'ca.pem'
+  create_remote_file(host, ca_pem_location, ca_pem_contents)
+  ca_pem_location
 end
 
 step "Install Puppet Enterprise." do

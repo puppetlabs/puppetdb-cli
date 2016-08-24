@@ -1,10 +1,6 @@
 require 'rake/clean'
 require 'rototiller'
 
-# Default test target if none specified
-DEFAULT_MASTER_TEST_TARGET = 'redhat7-64mdca'
-DEFAULT_TEST_TARGETS = "#{DEFAULT_MASTER_TEST_TARGET}-windows2012r2-64client."
-
 desc 'Run acceptance tests'
 
 desc "Generate Beaker Host config"
@@ -34,18 +30,18 @@ end
 
 desc "Run beaker based acceptance tests"
 task acceptance: :host_config
-task acceptance: :check_redis_pe_ver if ENV["BEAKER_TYPE"] == 'pe'
+task acceptance: :check_redis_pe_ver unless ENV["BEAKER_TYPE"] == 'foss'
 task :acceptance do
 
   #fail if SHA not present
   fail "SHA must be set in order to setup repositories!!!" if !ENV['SHA']
 
   # hardcode the pe_dir into the repo instead of the jenkins job
-  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.3/ci-ready' if ENV["BEAKER_TYPE"] == 'pe'
+  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.3/ci-ready' unless ENV["BEAKER_TYPE"] == 'foss'
 
   config = ENV["BEAKER_CONFIG"] || 'hosts.cfg'
   preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
-  type = ENV["BEAKER_TYPE"] || 'foss'
+  type = ENV["BEAKER_TYPE"] || 'pe'
   keyfile = ENV["BEAKER_KEYFILE"] || "#{ENV['HOME']}/.ssh/id_rsa-acceptance"
   test_suite = ENV["BEAKER_TESTSUITE"] || "#{type}/tests/"
   pre_suite = ENV["BEAKER_PRESUITE"] || "#{type}/setup/pre_suite"

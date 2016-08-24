@@ -12,7 +12,7 @@ test_name "basic validation of puppetdb-cli subcommands" do
     login_with_puppet_access_on(client, user)
   end
 
-  puppet_query_on(client, "'nodes{}'")
+  puppet_query_on(client, "nodes{}")
   puppet_db_on(client, "status")
   dir = client.tmpdir('pdb-cli-basic')
   puppet_db_on(client, "export #{dir}/pdb_archive.tgz")
