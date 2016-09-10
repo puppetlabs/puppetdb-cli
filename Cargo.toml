@@ -22,39 +22,23 @@ name = "puppet-query"
 path = "src/query.rs"
 
 [dependencies]
+#kitchensink = "0.1"
 hyper = "0.8"
 docopt = "0.6"
 rustc-serialize = "0.3"
 url = "0.5"
-
-[target."cfg(windows)".dependencies]
-winapi = "0.2.4"
-winreg = "0.3.2"
-shell32-sys = "0.1.1"
-ole32-sys = "0.2.0"
-kernel32-sys = "0.2.1"
-advapi32-sys = "0.2.0"
-userenv-sys = "0.2.0"
-
-[dependencies.openssl]
-version = "0.7"
-features = ["tlsv1_2"]
-
-[dependencies.openssl-verify]
-version = "0.1"
 
 [dependencies.multipart]
 version = "0.7"
 default-features = false
 features = ["hyper", "client"]
 
-[dependencies.puppet_access]
-optional = true
-path = "puppet_access"
+[dependencies.kitchensink]
+path = "../rust/rust-kitchensink"
 
 [features]
 default = []
-puppet-access = ["puppet_access"]
+token-auth = []
 
 [dev-dependencies]
 tempdir = "0.3"

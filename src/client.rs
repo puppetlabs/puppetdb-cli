@@ -6,17 +6,14 @@ use hyper;
 use hyper::error;
 use hyper::header::{Connection, ContentType, UserAgent};
 
-use url::Url;
+use kitchensink::net::{self,Auth};
+use kitchensink::utils::HyperResult;
 
 use super::config::Config;
-use super::utils::HyperResult;
-use super::net::Auth;
 
 
-#[cfg(feature = "puppet-access")]
-use puppet_access;
-#[cfg(feature = "puppet-access")]
-use std::env;
+#[cfg(feature = "token-auth")]
+use kitchensink::token;
 
 /// PuppetDB client struct.
 pub struct PdbClient {
@@ -26,21 +23,9 @@ pub struct PdbClient {
     pub auth: Auth,
 }
 
-/// Checks whether the vector of urls contains a url that needs to use SSL, i.e.
-/// has `https` as the scheme.
-fn is_ssl(server_urls: &Vec<String>) -> bool {
-    server_urls.into_iter()
-        .any(|url| {
-            "https" ==
-            Url::parse(&url)
-                .unwrap_or_else(|e| pretty_panic!("Error parsing url {:?}: {}", url, e))
-                .scheme
-        })
-}
-
 impl PdbClient {
     pub fn new(config: Config) -> PdbClient {
-        let result = if is_ssl(&config.server_urls) {
+        let result = if net::is_ssl(&config.server_urls) {
             PdbClient::with_auth(config)
         } else {
             PdbClient::without_auth(config)
@@ -56,7 +41,7 @@ impl PdbClient {
         })
     }
 
-    #[cfg(not(feature = "puppet-access"))]
+    #[cfg(not(feature = "token-auth"))]
     pub fn with_auth(config: Config) -> io::Result<PdbClient> {
 
         if config.token.is_some() {
@@ -84,7 +69,7 @@ impl PdbClient {
         }
     }
 
-    #[cfg(feature = "puppet-access")]
+    #[cfg(feature = "token-auth")]
     pub fn with_auth(config: Config) -> io::Result<PdbClient> {
 
         if config.cacert.is_none() {
@@ -101,7 +86,7 @@ impl PdbClient {
                     },
                 })
             } else if let Some(path) = config.token {
-                match puppet_access::read_token(path.clone()) {
+                match token::read_token(path.clone()) {
                     Ok(contents) => {
                         Ok(PdbClient {
                             server_urls: config.server_urls,
@@ -117,43 +102,36 @@ impl PdbClient {
                     }
                 }
             } else {
-                let conf_dir = super::utils::home_dir();
-                let path = puppet_access::default_token_path(conf_dir);
-                if !path.is_empty() {
-                    match puppet_access::read_token(path.clone()) {
-                        Ok(contents) => {
-                            Ok(PdbClient {
-                                server_urls: config.server_urls,
-                                auth: Auth::TokenAuth {
-                                    cacert: config.cacert.unwrap(),
-                                    token: contents,
-                                },
-                            })
-                        }
-                        Err(e) => {
-                            match e.kind() {
-                                io::ErrorKind::NotFound => {
-                                    Err(io::Error::new(io::ErrorKind::NotFound,
-                                                       "ssl requires a token, please use `puppet \
-                                                        access login` to retrieve a token \
-                                                        (alternatively use 'cert' and 'key' for \
-                                                        whitelist validation)"))
-                                }
-                                // For exmaple this could happen if a user made
-                                // a directory `$HOME/.puppetlabs/token`
-                                _ => {
-                                    Err(io::Error::new(e.kind(),
-                                                       format!("could not open token {:?}: {}",
-                                                               path,
-                                                               e)))
-                                }
+                let path = token::default_token_path();
+                match token::read_token(path.clone()) {
+                    Ok(contents) => {
+                        Ok(PdbClient {
+                            server_urls: config.server_urls,
+                            auth: Auth::TokenAuth {
+                                cacert: config.cacert.unwrap(),
+                                token: contents,
+                            },
+                        })
+                    }
+                    Err(e) => {
+                        match e.kind() {
+                            io::ErrorKind::NotFound => {
+                                Err(io::Error::new(io::ErrorKind::NotFound,
+                                                   "ssl requires a token, please use `puppet \
+                                                    access login` to retrieve a token \
+                                                    (alternatively use 'cert' and 'key' for \
+                                                    whitelist validation)"))
+                            }
+                            // For exmaple this could happen if a user made
+                            // a directory `$HOME/.puppetlabs/token`
+                            _ => {
+                                Err(io::Error::new(e.kind(),
+                                                   format!("could not open token {:?}: {}",
+                                                           path,
+                                                           e)))
                             }
                         }
                     }
-                } else {
-                    Err(io::Error::new(io::ErrorKind::Other,
-                                       "unable to set default token path, \
-                                        please use the `--token` option directly"))
                 }
             }
         }
@@ -202,7 +180,7 @@ impl PdbClient {
 }
 
 #[test]
-#[cfg(not(feature = "puppet-access"))]
+#[cfg(not(feature = "token-auth"))]
 /// Check that `PdbClient::with_auth(Config)` validates the config properly
 fn with_auth_works() {
 
@@ -244,7 +222,7 @@ fn with_auth_works() {
 }
 
 #[test]
-#[cfg(feature = "puppet-access")]
+#[cfg(feature = "token-auth")]
 /// Check that `PdbClient::with_auth(Config)` validates the config properly
 fn with_auth_works() {
 

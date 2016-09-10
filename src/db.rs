@@ -1,8 +1,8 @@
 extern crate rustc_serialize;
 extern crate docopt;
-extern crate hyper;
 
 #[macro_use]
+extern crate kitchensink;
 extern crate puppetdb;
 
 use rustc_serialize::json;
@@ -33,7 +33,7 @@ Options:
 use puppetdb::client;
 use puppetdb::config;
 use puppetdb::admin;
-use puppetdb::utils;
+use kitchensink::utils;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
@@ -54,7 +54,6 @@ struct Args {
 }
 
 use std::fs::File;
-use std::env;
 
 /// Copies the response body to a file with the given path.
 fn copy_response_to_file(resp: &mut utils::HyperResponse, path: String) {
@@ -80,8 +79,7 @@ fn main() {
     let path = if let Some(cfg_path) = args.flag_config {
         cfg_path
     } else {
-        let conf_dir = utils::home_dir();
-        config::default_config_path(conf_dir)
+        config::default_config_path()
     };
 
     let config = config::Config::load(path,

@@ -1,36 +1,19 @@
 use std::io::{Read, Write};
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use rustc_serialize::json;
+use kitchensink::utils::{self,NotEmpty};
 
-/// Given a `home_dir` (e.g. from `std::env::home_dir()`), returns the default
-/// location of the client configuration file,
-/// `$HOME/.puppetlabs/client-tools/puppetdb.conf`.
-pub fn default_config_path(mut home_dir: PathBuf) -> String {
-    home_dir.push(".puppetlabs");
-    home_dir.push("client-tools");
-    home_dir.push("puppetdb");
-    home_dir.set_extension("conf");
-    home_dir.to_str().unwrap().to_owned()
+pub fn default_config_path() -> String {
+    let mut conf_dir = utils::local_client_tools_dir();
+    conf_dir.push("puppetdb");
+    conf_dir.set_extension("conf");
+    conf_dir.to_str().unwrap().to_owned()
 }
 
-#[cfg(not(windows))]
 pub fn global_config_path() -> String {
-    let mut path = PathBuf::from("/etc/puppetlabs/client-tools");
-    path.push("puppetdb");
-    path.set_extension("conf");
-    path.to_str().unwrap().to_owned()
-}
-
-#[cfg(windows)]
-use windows;
-
-#[cfg(windows)]
-pub fn global_config_path() -> String {
-    let mut path = windows::get_special_folder(&windows::FOLDERID_ProgramData).unwrap();
-    path.push("PuppetLabs");
-    path.push("client-tools");
+    let mut path = utils::global_client_tools_dir();
     path.push("puppetdb");
     path.set_extension("conf");
     path.to_str().unwrap().to_owned()
@@ -75,13 +58,7 @@ impl Config {
                 token: Option<String>)
                 -> Config {
 
-        let server_urls = urls.and_then(|s| {
-                if s.is_empty() {
-                    None
-                } else {
-                    Some(s)
-                }
-            })
+        let server_urls = urls.not_empty()
             .and_then(|s| Some(split_server_urls(s)));
 
         // TODO Don't parse config if urls aren't HTTP. This is trivial but it
