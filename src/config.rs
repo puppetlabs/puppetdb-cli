@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::io::{Write, Read};
 use std::fs::File;
 use std::path::Path;
 
@@ -34,7 +34,7 @@ fn split_server_urls_works() {
 #[derive(RustcDecodable,RustcEncodable,Clone,Debug)]
 pub struct Config {
     pub server_urls: Vec<String>,
-    pub cacert: Option<String>,
+    pub cacert: String,
     pub cert: Option<String>,
     pub key: Option<String>,
     pub token: Option<String>,
@@ -46,6 +46,7 @@ pub fn merge_configs(first: PdbConfigSection, second: PdbConfigSection) -> PdbCo
         cacert: second.cacert.or(first.cacert),
         cert: second.cert.or(first.cert),
         key: second.key.or(first.key),
+        token_file: second.token_file.or(first.token_file),
     }
 }
 
@@ -67,7 +68,7 @@ impl Config {
         if server_urls.is_some() && cacert.is_some() && cert.is_some() && key.is_some() {
             return Config {
                 server_urls: server_urls.unwrap(),
-                cacert: cacert,
+                cacert: cacert.unwrap(),
                 cert: cert,
                 key: key,
                 token: None,
@@ -81,16 +82,21 @@ impl Config {
             cacert: cacert,
             cert: cert,
             key: key,
+            token_file: token,
         };
         let cfg = merge_configs(file_configs, flags_config);
 
         // TODO Add tests for Config parsing edge cases
         Config {
             server_urls: cfg.server_urls.unwrap_or(default_server_urls()),
-            cacert: cfg.cacert,
+            cacert: cfg.cacert.unwrap_or(utils::default_certificate_file()),
             cert: cfg.cert,
             key: cfg.key,
-            token: token,
+            // Unfortunately the default token_file is retrieved in the client
+            // code due to differences in error messages/code path in OS and PE.
+            // To properly consilidate defaulting of configuration we'll
+            // probably need to consider some refactoring.
+            token: cfg.token_file,
         }
     }
 }
@@ -101,6 +107,7 @@ pub struct PdbConfigSection {
     cacert: Option<String>,
     cert: Option<String>,
     key: Option<String>,
+    token_file: Option<String>,
 }
 
 fn default_server_urls() -> Vec<String> {
@@ -113,6 +120,7 @@ fn empty_pdb_config_section() -> PdbConfigSection {
         cacert: None,
         cert: None,
         key: None,
+        token_file: None
     }
 }
 
@@ -151,6 +159,8 @@ impl PdbConfigSection {
                 .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
             key: json.find_path(&["puppetdb", "key"])
                 .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
+            token_file: json.find_path(&["puppetdb", "token-file"])
+                .and_then(|s| s.as_string().and_then(|s| Some(s.to_string()))),
         }
     }
 }
@@ -159,7 +169,6 @@ impl PdbConfigSection {
 mod test {
     use super::*;
     use std::fs::File;
-    use rustc_serialize::json;
     use std::io::{Write, Error};
     use std::path::PathBuf;
 
@@ -170,41 +179,39 @@ mod test {
         temp_dir.path().join(file_name)
     }
 
-    #[derive(RustcEncodable)]
-    struct CLIConfig {
-        puppetdb: PdbConfigSection,
-    }
-
-
-    fn spit_config(file_path: &str, config: &CLIConfig) -> Result<(), Error> {
+    fn spit(file_path: &str, content: &str) -> Result<(), Error> {
         let mut f = try!(File::create(file_path));
-        try!(f.write_all(json::encode(config).unwrap().as_bytes()));
+        try!(f.write_all(content.as_bytes()));
         Ok(())
     }
 
     #[test]
     fn load_test_all_fields() {
-        let config = CLIConfig {
-            puppetdb: PdbConfigSection {
+        let config = PdbConfigSection {
                 server_urls: Some(vec!["http://foo".to_string()]),
                 cacert: Some("foo".to_string()),
                 cert: Some("bar".to_string()),
                 key: Some("baz".to_string()),
-            },
+                token_file: Some("buzz".to_string()),
         };
 
         let temp_dir = TempDir::new_in("target", "test-").unwrap();
         let temp_path = create_temp_path(&temp_dir, "testfile.json");
         let path_str = temp_path.as_path().to_str().unwrap();
 
-        spit_config(path_str, &config).unwrap();
+        // Because the token-file param has a dash instead of an underscore, we
+        // can easily encode a PdbConfigSection using the standard json tools so
+        // we duplicate the config here.
+        let config_string = "{\"puppetdb\":{\"server_urls\":[\"http://foo\"],\"cacert\":\"foo\",\"cert\":\"bar\",\"key\":\"baz\",\"token-file\":\"buzz\"}}";
+        spit(path_str, config_string).unwrap();
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
-        let PdbConfigSection { server_urls, cacert, cert, key } = config.puppetdb;
+        let PdbConfigSection { server_urls, cacert, cert, key, token_file } = config;
         assert_eq!(server_urls.unwrap()[0], slurped_config.server_urls[0]);
-        assert_eq!(cacert, slurped_config.cacert);
+        assert_eq!(cacert.unwrap(), slurped_config.cacert);
         assert_eq!(cert, slurped_config.cert);
-        assert_eq!(key, slurped_config.key)
+        assert_eq!(key, slurped_config.key);
+        assert_eq!(token_file, slurped_config.token)
     }
 
     fn spit_string(file_path: &str, contents: &str) -> Result<(), Error> {
@@ -225,7 +232,6 @@ mod test {
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
         assert_eq!("http://foo", slurped_config.server_urls[0]);
-        assert_eq!(None, slurped_config.cacert);
         assert_eq!(None, slurped_config.cert);
         assert_eq!(None, slurped_config.key);
     }
@@ -243,7 +249,6 @@ mod test {
 
         assert_eq!(vec!["http://foo", "https://localhost:8080"],
                    slurped_config.server_urls);
-        assert_eq!(None, slurped_config.cacert);
         assert_eq!(None, slurped_config.cert);
         assert_eq!(None, slurped_config.key);
     }
@@ -258,7 +263,6 @@ mod test {
         let slurped_config = Config::load(path_str.to_string(), None, None, None, None, None);
 
         assert_eq!(vec!["http://127.0.0.1:8080"], slurped_config.server_urls);
-        assert_eq!(None, slurped_config.cacert);
         assert_eq!(None, slurped_config.cert);
         assert_eq!(None, slurped_config.key);
     }

@@ -11,8 +11,7 @@ use kitchensink::utils::HyperResult;
 
 use super::config::Config;
 
-
-#[cfg(feature = "token-auth")]
+#[cfg(feature = "puppet-access")]
 use kitchensink::token;
 
 /// PuppetDB client struct.
@@ -41,95 +40,84 @@ impl PdbClient {
         })
     }
 
-    #[cfg(not(feature = "token-auth"))]
+    #[cfg(not(feature = "puppet-access"))]
     pub fn with_auth(config: Config) -> io::Result<PdbClient> {
 
         if config.token.is_some() {
             return Err(io::Error::new(io::ErrorKind::InvalidData,
-                                      "to use token auth please install Puppet Enterprise."));
+                                      "to configure token auth please install Puppet Enterprise."));
         }
-
-        if config.cacert.is_none() {
-            Err(io::Error::new(io::ErrorKind::InvalidData,
-                               "ssl requires 'cacert' to be set"))
+        if config.cert.is_some() && config.key.is_some() {
+            Ok(PdbClient {
+                server_urls: config.server_urls,
+                auth: Auth::CertAuth {
+                    cacert: config.cacert,
+                    cert: config.cert.unwrap(),
+                    key: config.key.unwrap(),
+                },
+            })
         } else {
-            if config.cert.is_some() && config.key.is_some() {
-                Ok(PdbClient {
-                    server_urls: config.server_urls,
-                    auth: Auth::CertAuth {
-                        cacert: config.cacert.unwrap(),
-                        cert: config.cert.unwrap(),
-                        key: config.key.unwrap(),
-                    },
-                })
-            } else {
-                Err(io::Error::new(io::ErrorKind::InvalidData,
-                                   "ssl requires 'cert' and 'key' to be set"))
-            }
+            Err(io::Error::new(io::ErrorKind::InvalidData,
+                               "ssl requires 'cert' and 'key' to be set"))
         }
     }
 
-    #[cfg(feature = "token-auth")]
+    #[cfg(feature = "puppet-access")]
     pub fn with_auth(config: Config) -> io::Result<PdbClient> {
 
-        if config.cacert.is_none() {
-            Err(io::Error::new(io::ErrorKind::InvalidData,
-                               "ssl requires 'cacert' to be set"))
-        } else {
-            if config.cert.is_some() && config.key.is_some() {
-                Ok(PdbClient {
-                    server_urls: config.server_urls,
-                    auth: Auth::CertAuth {
-                        cacert: config.cacert.unwrap(),
-                        cert: config.cert.unwrap(),
-                        key: config.key.unwrap(),
-                    },
-                })
-            } else if let Some(path) = config.token {
-                match token::read_token(path.clone()) {
-                    Ok(contents) => {
-                        Ok(PdbClient {
-                            server_urls: config.server_urls,
-                            auth: Auth::TokenAuth {
-                                cacert: config.cacert.unwrap(),
-                                token: contents,
-                            },
-                        })
-                    }
-                    Err(e) => {
-                        Err(io::Error::new(e.kind(),
-                                           format!("could not open token {:?}: {}", path, e)))
-                    }
+        if config.cert.is_some() && config.key.is_some() {
+            Ok(PdbClient {
+                server_urls: config.server_urls,
+                auth: Auth::CertAuth {
+                    cacert: config.cacert,
+                    cert: config.cert.unwrap(),
+                    key: config.key.unwrap(),
+                },
+            })
+        } else if let Some(path) = config.token {
+            match token::read_token(path.clone()) {
+                Ok(contents) => {
+                    Ok(PdbClient {
+                        server_urls: config.server_urls,
+                        auth: Auth::TokenAuth {
+                            cacert: config.cacert,
+                            token: contents,
+                        },
+                    })
                 }
-            } else {
-                let path = token::default_token_path();
-                match token::read_token(path.clone()) {
-                    Ok(contents) => {
-                        Ok(PdbClient {
-                            server_urls: config.server_urls,
-                            auth: Auth::TokenAuth {
-                                cacert: config.cacert.unwrap(),
-                                token: contents,
-                            },
-                        })
-                    }
-                    Err(e) => {
-                        match e.kind() {
-                            io::ErrorKind::NotFound => {
-                                Err(io::Error::new(io::ErrorKind::NotFound,
-                                                   "ssl requires a token, please use `puppet \
-                                                    access login` to retrieve a token \
-                                                    (alternatively use 'cert' and 'key' for \
-                                                    whitelist validation)"))
-                            }
-                            // For exmaple this could happen if a user made
-                            // a directory `$HOME/.puppetlabs/token`
-                            _ => {
-                                Err(io::Error::new(e.kind(),
-                                                   format!("could not open token {:?}: {}",
-                                                           path,
-                                                           e)))
-                            }
+                Err(e) => {
+                    Err(io::Error::new(e.kind(),
+                                       format!("could not open token {:?}: {}", path, e)))
+                }
+            }
+        } else {
+            let path = token::default_token_path();
+            match token::read_token(path.clone()) {
+                Ok(contents) => {
+                    Ok(PdbClient {
+                        server_urls: config.server_urls,
+                        auth: Auth::TokenAuth {
+                            cacert: config.cacert,
+                            token: contents,
+                        },
+                    })
+                }
+                Err(e) => {
+                    match e.kind() {
+                        io::ErrorKind::NotFound => {
+                            Err(io::Error::new(io::ErrorKind::NotFound,
+                                               "ssl requires a token, please use `puppet \
+                                                access login` to retrieve a token \
+                                                (alternatively use 'cert' and 'key' for \
+                                                whitelist validation)"))
+                        }
+                        // For exmaple this could happen if a user made
+                        // a directory `$HOME/.puppetlabs/token`
+                        _ => {
+                            Err(io::Error::new(e.kind(),
+                                               format!("could not open token {:?}: {}",
+                                                       path,
+                                                       e)))
                         }
                     }
                 }
@@ -180,31 +168,22 @@ impl PdbClient {
 }
 
 #[test]
-#[cfg(not(feature = "token-auth"))]
+#[cfg(not(feature = "puppet-access"))]
 /// Check that `PdbClient::with_auth(Config)` validates the config properly
 fn with_auth_works() {
 
     let no_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: None,
+        cacert: "baz".to_string(),
         cert: None,
         key: None,
         token: None,
     };
     assert!(PdbClient::with_auth(no_auth).is_err());
 
-    let missing_cacert_cert_auth = Config {
-        server_urls: vec!["foo".to_string()],
-        cacert: None,
-        cert: Some("bar".to_string()),
-        key: Some("bar".to_string()),
-        token: None,
-    };
-    assert!(PdbClient::with_auth(missing_cacert_cert_auth).is_err());
-
     let missing_cert_cert_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: None,
         key: Some("bar".to_string()),
         token: None,
@@ -213,7 +192,7 @@ fn with_auth_works() {
 
     let missing_key_cert_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: Some("bar".to_string()),
         key: None,
         token: None,
@@ -222,50 +201,33 @@ fn with_auth_works() {
 }
 
 #[test]
-#[cfg(feature = "token-auth")]
+#[cfg(feature = "puppet-access")]
 /// Check that `PdbClient::with_auth(Config)` validates the config properly
 fn with_auth_works() {
 
-    let no_auth = Config {
-        server_urls: vec!["foo".to_string()],
-        cacert: None,
-        cert: None,
-        key: None,
-        token: None,
-    };
-    assert!(PdbClient::with_auth(no_auth).is_err());
-
-    let missing_cacert_cert_auth = Config {
-        server_urls: vec!["foo".to_string()],
-        cacert: None,
-        cert: Some("bar".to_string()),
-        key: Some("bar".to_string()),
-        token: None,
-    };
-    assert!(PdbClient::with_auth(missing_cacert_cert_auth).is_err());
-
+    // Defaults to TokenAuth if CertAuth isn't fully configured
     let missing_cert_cert_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: None,
         key: Some("bar".to_string()),
         token: None,
     };
-    assert!(PdbClient::with_auth(missing_cert_cert_auth).is_err());
+    assert!(PdbClient::with_auth(missing_cert_cert_auth).is_ok());
 
     let missing_key_cert_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: Some("bar".to_string()),
         key: None,
         token: None,
     };
-    assert!(PdbClient::with_auth(missing_key_cert_auth).is_err());
+    assert!(PdbClient::with_auth(missing_key_cert_auth).is_ok());
 
     // CertAuth takes priority over TokenAuth
     let all_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: Some("bar".to_string()),
         key: Some("bar".to_string()),
         token: Some("bar".to_string()),
@@ -276,24 +238,17 @@ fn with_auth_works() {
         _ => false,
     });
 
-    let missing_cacert_token_auth = Config {
-        server_urls: vec!["foo".to_string()],
-        cacert: None,
-        cert: None,
-        key: None,
-        token: Some("bar".to_string()),
-    };
-    assert!(PdbClient::with_auth(missing_cacert_token_auth).is_err());
-
-
+    // FIXME This test is broken when the puppet-access feature is enabled as it
+    // tries to load the confiured token. Audit the rest of the tests as well to
+    // make sure they work on a clean environment and run in CI.
     let token_auth = Config {
         server_urls: vec!["foo".to_string()],
-        cacert: Some("bar".to_string()),
+        cacert: "bar".to_string(),
         cert: None,
         key: None,
         token: Some("bar".to_string()),
     };
-    assert!(PdbClient::with_auth(token_auth.clone()).ok().is_some());
+    assert!(PdbClient::with_auth(token_auth.clone()).is_ok());
     assert!(match PdbClient::with_auth(token_auth).unwrap().auth {
         Auth::TokenAuth{..} => true,
         _ => false,

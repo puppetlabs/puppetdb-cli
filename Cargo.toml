@@ -1,6 +1,6 @@
 [package]
 name = "puppetdb"
-version = "1.1.1"
+version = "1.2.0"
 description = "PuppetDB CLI tool in rust."
 readme = "README.md"
 documentation = "http://puppetlabs.github.io/puppetdb-cli/index.html"
@@ -22,7 +22,7 @@ name = "puppet-query"
 path = "src/query.rs"
 
 [dependencies]
-#kitchensink = "0.1"
+kitchensink = "0.2.1"
 hyper = "0.8"
 docopt = "0.6"
 rustc-serialize = "0.3"
@@ -33,12 +33,9 @@ version = "0.7"
 default-features = false
 features = ["hyper", "client"]
 
-[dependencies.kitchensink]
-path = "../rust/rust-kitchensink"
-
 [features]
 default = []
-token-auth = []
+puppet-access = []
 
 [dev-dependencies]
 tempdir = "0.3"
