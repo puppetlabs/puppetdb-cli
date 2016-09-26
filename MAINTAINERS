@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "file_format": "This MAINTAINERS file format is described at https://github.com/puppetlabs/maintainers",
+  "issues": "https://tickets.puppetlabs.com/browse/PA",
+  "people": [
+    {
+      "github": "ajroetker",
+      "email": "andrew.roetker@puppet.com",
+      "name": "AJ Roetker"
+    },
+    {
+      "github": "senior",
+      "email": "ryan.senior@puppet.com",
+      "name": "Ryan Senior"
+    },
+    {
+      "github": "wkalt",
+      "email": "wyatt@puppet.com",
+      "name": "Wyatt Alt"
+    },
+    {
+      "github": "rbrw",
+      "email": "rlb@puppet.com",
+      "name": "Rob Browning"
+    }
+  ]
+}
