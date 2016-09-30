@@ -1,6 +1,6 @@
 [package]
 name = "puppetdb"
-version = "1.1.0"
+version = "1.1.1"
 description = "PuppetDB CLI tool in rust."
 readme = "README.md"
 documentation = "http://puppetlabs.github.io/puppetdb-cli/index.html"
