@@ -108,12 +108,13 @@ The format of the config file can be deduced from the following example.
   {
     "puppetdb" : {
       "server_urls" : [
-        "https://pdb.internal.lan:8081",
-        "https://read-pdb.internal.lan:8081"
+        "https://<PUPPETDB_HOST>:8081",
+        "https://<PUPPETDB_REPLICA_HOST>:8081"
       ],
       "cacert" : "/path/to/cacert",
       "cert" : "/path/to/cert",
-      "key" : "/path/to/private_key"
+      "key" : "/path/to/private_key",
+      "token-file" : "/path/to/token (PE only)"
       },
     }
   }

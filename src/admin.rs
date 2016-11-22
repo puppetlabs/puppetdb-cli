@@ -4,10 +4,10 @@ use url::Url;
 use multipart::client::Multipart;
 use hyper::header::{Connection, UserAgent};
 use hyper::method::Method;
+use kitchensink::net::Auth;
+use kitchensink::utils::HyperResult;
 
 use super::client::PdbClient;
-use super::net::Auth;
-use super::utils::HyperResult;
 
 /// POSTs a multipart request to PuppetDB for importing an archive.
 pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
