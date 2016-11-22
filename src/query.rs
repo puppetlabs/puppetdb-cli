@@ -76,5 +76,6 @@ fn main() {
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    io::copy(&mut resp, &mut handle).ok().expect("failed to write response");
+    io::copy(&mut resp, &mut handle)
+        .unwrap_or_else(|e| pretty_panic!("Failed to write response: {}", e));
 }
