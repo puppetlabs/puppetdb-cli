@@ -1,15 +1,16 @@
 extern crate rustc_serialize;
 extern crate docopt;
-extern crate hyper;
 
 #[macro_use]
+extern crate kitchensink;
 extern crate puppetdb;
 
 use std::io::{self, Write};
 
 use puppetdb::client;
-use puppetdb::utils;
 use puppetdb::config;
+
+use kitchensink::utils;
 
 use docopt::Docopt;
 
@@ -57,8 +58,7 @@ fn main() {
     let path = if let Some(cfg_path) = args.flag_config {
         cfg_path
     } else {
-        let conf_dir = utils::home_dir();
-        config::default_config_path(conf_dir)
+        config::default_config_path()
     };
 
     let config = config::Config::load(path,
@@ -76,5 +76,6 @@ fn main() {
 
     let stdout = io::stdout();
     let mut handle = stdout.lock();
-    io::copy(&mut resp, &mut handle).ok().expect("failed to write response");
+    io::copy(&mut resp, &mut handle)
+        .unwrap_or_else(|e| pretty_panic!("Failed to write response: {}", e));
 }

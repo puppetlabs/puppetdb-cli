@@ -51,6 +51,10 @@ Overrides the path for the Puppet client cert.
 
 Overrides the path for the Puppet client private key.
 
+=item B<--token> <path>
+
+Overrides the path for the RBAC token (PE only).
+
 =back
 
 =head1 SEE ALSO
