@@ -11,7 +11,6 @@ use super::client::PdbClient;
 
 /// POSTs a multipart request to PuppetDB for importing an archive.
 pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
-    // Import and export are not prepared to use token auth
     let server_url: String = pdb_client.server_urls[0].clone();
     let url = Url::parse(&(server_url + "/pdb/admin/v1/archive")).unwrap();
     let request = Auth::request(&pdb_client.auth, Method::Post, url);
@@ -22,7 +21,6 @@ pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
 }
 
 pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> HyperResult {
-    // Import and export are not prepared to use token auth
     let server_url: String = pdb_client.server_urls[0].clone();
     let body = "anonymization=".to_string() + &anonymization;
     let cli = Auth::client(&pdb_client.auth);
