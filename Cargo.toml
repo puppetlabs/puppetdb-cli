@@ -29,7 +29,7 @@ rustc-serialize = "0.3"
 url = "0.5"
 
 [dependencies.openssl]
-version = "0.7"
+version = "0.7.10"
 features = ["tlsv1_2"]
 
 [dependencies.openssl-verify]
