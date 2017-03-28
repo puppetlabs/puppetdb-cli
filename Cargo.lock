@@ -4,7 +4,7 @@ version = "1.3.0"
 dependencies = [
  "docopt 0.6.86 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.9.18 (registry+https://github.com/rust-lang/crates.io-index)",
- "kitchensink 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kitchensink 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "multipart 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempdir 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -58,7 +58,7 @@ name = "docopt"
 version = "0.6.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "lazy_static 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.1.80 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "strsim 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "idna"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "kitchensink"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "advapi32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -177,7 +177,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "lazy_static"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -267,7 +267,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gcc 0.3.45 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.7.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys-extras 0.7.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -509,7 +509,7 @@ name = "url"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "idna 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -580,13 +580,13 @@ dependencies = [
 "checksum hpack 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3d2da7d3a34cf6406d9d700111b8eafafe9a251de41ae71d8052748259343b58"
 "checksum httparse 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a6e7a63e511f9edffbab707141fbb8707d1a3098615fb2adbd5769cdfcc9b17d"
 "checksum hyper 0.9.18 (registry+https://github.com/rust-lang/crates.io-index)" = "1b9bf64f730d6ee4b0528a5f0a316363da9d8104318731509d4ccc86248f82b3"
-"checksum idna 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1053236e00ce4f668aeca4a769a09b3bf5a682d802abd6f3cb39374f6b162c11"
+"checksum idna 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "6ac85ec3f80c8e4e99d9325521337e14ec7555c458a14e377d189659a427f375"
 "checksum kernel32-sys 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e014dab1082fd9d80ea1fa6fcb261b47ed3eb511612a14198bb507701add083e"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
-"checksum kitchensink 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "113e79fe3ae68122715f8bc335576ee39b19569aea8553bd3a795bee3d95f161"
+"checksum kitchensink 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "8b12b955d137ee3f6e7ded55dec22b227d7367a2651a35f713f8cd529d1a23e5"
 "checksum ktmw32-sys 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f9313a869ff779ae08dd990b75a92dc06aa16d771f41305f7286649cd39a0ee"
 "checksum language-tags 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a91d884b6667cd606bb5a69aa0c99ba811a115fc68915e7056ec08a46e93199a"
-"checksum lazy_static 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4732c563b9a21a406565c4747daa7b46742f082911ae4753f390dc9ec7ee1a97"
+"checksum lazy_static 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2f61b8421c7a4648c391611625d56fdd5c7567da05af1be655fd8cacc643abb3"
 "checksum libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)" = "88ee81885f9f04bff991e306fea7c1c60a5f0f9e409e99f6b40e3311a3363135"
 "checksum libressl-pnacl-sys 2.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "cbc058951ab6a3ef35ca16462d7642c4867e6403520811f28537a4e2f2db3e71"
 "checksum log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "5141eca02775a762cc6cd564d8d2c50f67c0ea3a372cbf1c51592b3e029e10ad"
