@@ -72,7 +72,7 @@ namespace :ci do
           {:name => '--xml', :is_boolean => true},
           {:name => '--no-color', :is_boolean => true},
           {:name => '--debug', :is_boolean => true},
-          {:name => '--hosts', :override_env => 'TEST_TARGET'},
+          {:name => '--hosts', :override_env => 'BEAKER_HOSTS'},
           {:name => '--preserve-hosts', :default => 'onfail', :override_env => 'BEAKER_PRESERVEHOSTS'},
           {:name => '--keyfile', :default => "#{ENV['HOME']}/.ssh/id_rsa-acceptance", :override_env => 'BEAKER_KEYFILE'},
           {:name => '--pre-suite', :default => 'pe/setup/pre_suite', :override_env => 'BEAKER_PRESUITE'},
@@ -95,11 +95,13 @@ namespace :ci do
     end
 
     task :set_test_target do
-      client = ENV['CLIENT_TEST_TARGET'] || (fail 'The environment variable CLIENT_TEST_TARGET must be set.')
-      # process the CLIENT_TEST_TARGET variable and assign it to TEST_TARGET so that rototiller will pick it up
-      monolithic_config = "#{client}client.mdca"
-      master_agent_config = "centos7-64.mdca-#{client}client.a"
-      ENV['TEST_TARGET'] ||= (client =~ /win|osx/) ? master_agent_config : monolithic_config
+      if ENV['BEAKER_HOSTS'].nil?
+        client = ENV['CLIENT_TEST_TARGET'] || (fail 'The environment variable CLIENT_TEST_TARGET must be set.')
+        # process the CLIENT_TEST_TARGET variable and assign it to TEST_TARGET so that rototiller will pick it up
+        monolithic_config = "#{client}client.mdca"
+        master_agent_config = "centos7-64.mdca-#{client}client.a"
+        ENV['BEAKER_HOSTS'] ||= (client =~ /win|osx/) ? master_agent_config : monolithic_config
+      end
     end
 
   end
