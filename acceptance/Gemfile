@@ -1,6 +1,5 @@
 source ENV['GEM_SOURCE'] || "https://rubygems.org"
 
-gem "beaker-abs", "~> 0.2"
 gem "beaker-hostgenerator", "~> 0.2"
 gem "beaker", '~> 2.5'
 gem 'beaker-abs', '~> 0.2'
