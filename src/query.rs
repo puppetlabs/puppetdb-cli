@@ -1,16 +1,11 @@
 extern crate rustc_serialize;
 extern crate docopt;
 
-extern crate serde;
-extern crate serde_json;
-extern crate serde_transcode;
-
 #[macro_use]
 extern crate kitchensink;
 extern crate puppetdb;
 
-use serde_json::{Serializer, Deserializer};
-use std::io::{self, Read, Write, BufReader, BufWriter};
+use std::io::{self, Write};
 
 use puppetdb::client;
 use puppetdb::config;
@@ -51,27 +46,6 @@ struct Args {
     arg_query: Option<String>,
 }
 
-fn prettify<R: Read, W: Write>(mut r: R, mut w: W) {
-    let reader = BufReader::new(&mut r);
-    let writer = BufWriter::new(&mut w);
-
-    let mut deserializer = Deserializer::from_reader(reader);
-    let mut serializer = Serializer::pretty(writer);
-    serde_transcode::transcode(&mut deserializer, &mut serializer)
-        .unwrap_or_else(|e| pretty_panic!("Failed to write response: {}", e));
-    serializer.into_inner().flush()
-        .unwrap_or_else(|e| pretty_panic!("Failed to write response: {}", e));
-}
-
-#[test]
-fn prettify_handles_utf8() {
-    let in_string = &b"[{ \"message\": \"\xE3\x83\x96\xE3\x83\xAC\xE3\x83\x83\xE3\x83\x88\"}]"[..];
-    let out_string = "[\n  {\n    \"message\": \"ブレット\"\n  }\n]";
-    let mut temp: Vec<u8> = Vec::new();
-    prettify(in_string, &mut temp);
-    assert_eq!(out_string.to_string(),String::from_utf8(temp).unwrap());
-}
-
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
@@ -101,5 +75,7 @@ fn main() {
     utils::assert_status_ok(&mut resp);
 
     let stdout = io::stdout();
-    prettify(resp, stdout.lock());
+    let mut handle = stdout.lock();
+    io::copy(&mut resp, &mut handle)
+        .unwrap_or_else(|e| pretty_panic!("Failed to write response: {}", e));
 }
