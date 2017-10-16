@@ -1,11 +1,21 @@
 source ENV['GEM_SOURCE'] || "https://rubygems.org"
 
-gem "beaker-abs", "~> 0.2"
-gem "beaker-hostgenerator", "~> 0.2"
-gem "beaker", '~> 2.5'
+def location_for(place, fake_version = nil)
+  if place =~ /^(git:[^#]*)#(.*)/
+    [fake_version, { :git => $1, :branch => $2, :require => false }].compact
+  elsif place =~ /^file:\/\/(.*)/
+    ['>= 0', { :path => File.expand_path($1), :require => false }]
+  else
+    [place, { :require => false }]
+  end
+end
+
+gem "beaker", *location_for(ENV['BEAKER_VERSION'] || '~> 3.12')
+gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || '~> 0.8')
+gem 'beaker-abs', '~> 0.2'
 unless ENV["BEAKER_TYPE"] == 'foss'
-  gem 'beaker-pe', '~> 0.9'
-  gem 'scooter', '~> 3.2', :require => false
+  gem 'beaker-pe', '~> 1.23'
+  gem 'scooter', *location_for(ENV['SCOOTER_VERSION'] || '~> 4.0')
 end
 gem 'rake', "~> 10.1"
 gem 'rototiller', '= 0.1.0'
