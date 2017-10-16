@@ -22,7 +22,7 @@ end
 desc 'Check the redis version if Jenkins'
 task :check_redis_pe_ver do
   if !ENV['BEAKER_PE_VER']
-    ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.3_pe_version`.strip
+    ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get 2016.4_pe_version`.strip
   else
     warn 'BEAKER_PE_VER already set, skipping check with redis'
   end
@@ -37,7 +37,7 @@ task :acceptance do
   fail "SHA must be set in order to setup repositories!!!" if !ENV['SHA']
 
   # hardcode the pe_dir into the repo instead of the jenkins job
-  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.3/ci-ready' unless ENV["BEAKER_TYPE"] == 'foss'
+  ENV['BEAKER_PE_DIR'] = 'http://neptune.puppetlabs.lan/2016.4/ci-ready' unless ENV["BEAKER_TYPE"] == 'foss'
 
   config = ENV["BEAKER_CONFIG"] || 'hosts.cfg'
   preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
@@ -87,7 +87,7 @@ namespace :ci do
       t.add_env do |env|
         env.name = 'pe_dist_dir'
         env.message = 'The location to download PE from example "http://neptune.puppetlabs.lan/20XX.X/ci-ready"'
-        env.default = 'http://neptune.puppetlabs.lan/2016.3/ci-ready'
+        env.default = 'http://neptune.puppetlabs.lan/2016.4/ci-ready'
       end
 
       t.add_command({:name => 'beaker', :override_env => 'BEAKER_EXECUTABLE'})
