@@ -54,7 +54,6 @@ struct Args {
 }
 
 use std::fs::File;
-use std::env;
 
 /// Copies the response body to a file with the given path.
 fn copy_response_to_file(resp: &mut utils::HyperResponse, path: String) {
