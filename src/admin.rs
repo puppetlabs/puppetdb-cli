@@ -22,11 +22,10 @@ pub fn post_import(pdb_client: &PdbClient, path: String) -> HyperResult {
 
 pub fn get_export(pdb_client: &PdbClient, anonymization: String) -> HyperResult {
     let server_url: String = pdb_client.server_urls[0].clone();
-    let body = "anonymization=".to_string() + &anonymization;
+    let query_params = "?anonymization_profile=".to_string() + &anonymization;
     let cli = Auth::client(&pdb_client.auth);
 
-    let req = cli.get(&(server_url + "/pdb/admin/v1/archive"))
-        .body(&body)
+    let req = cli.get(&(server_url + "/pdb/admin/v1/archive" + &query_params))
         .header(UserAgent("puppetdb-cli".to_owned()))
         .header(Connection::close());
     Auth::auth_header(&pdb_client.auth, req).send()

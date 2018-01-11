@@ -19,15 +19,22 @@ pub fn global_config_path() -> String {
     path.to_str().unwrap().to_owned()
 }
 
+pub fn remove_trailing_slash(url: String) -> String {
+    let mut trimmed = url.clone();
+    if Some('/') == trimmed.chars().last() {
+        trimmed.pop();
+    }
+    trimmed.trim().to_owned()
+}
 
 fn split_server_urls(urls: String) -> Vec<String> {
-    urls.split(",").map(|u| u.trim().to_string()).collect()
+    urls.split(",").map(|u| remove_trailing_slash(u.trim().to_string())).collect()
 }
 
 #[test]
 fn split_server_urls_works() {
     assert_eq!(vec!["http://localhost:8080".to_string(), "http://foo.bar.baz:9190".to_string()],
-               split_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190"
+               split_server_urls("   http://localhost:8080  ,   http://foo.bar.baz:9190/"
                                      .to_string()))
 }
 
