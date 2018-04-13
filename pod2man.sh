@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -ue
 
@@ -7,7 +7,7 @@ if ! test "$#" -eq 1; then
     exit 1
 fi
 
-type -p pod2man &> /dev/null
+which pod2man > /dev/null
 test -f "man/puppet-db.pod"
 
 pod2man_helper() {
