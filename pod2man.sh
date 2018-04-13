@@ -15,7 +15,7 @@ pod2man_helper() {
     local outpath="$2"
     local center="$3"
     test -f "man/${manfile}.pod"
-    pod2man --section 8 --release \
+    pod2man --section 8 --release '' \
             --center "$center" \
             --name "$manfile" \
             "man/${manfile}.pod" "${outpath}/share/man/man8/${manfile}.8"
