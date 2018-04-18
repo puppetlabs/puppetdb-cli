@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -ue
 
@@ -7,7 +7,7 @@ if ! test "$#" -eq 1; then
     exit 1
 fi
 
-type -p pod2man &> /dev/null
+which pod2man > /dev/null
 test -f "man/puppet-db.pod"
 
 pod2man_helper() {
@@ -15,7 +15,7 @@ pod2man_helper() {
     local outpath="$2"
     local center="$3"
     test -f "man/${manfile}.pod"
-    pod2man --section 8 --release \
+    pod2man --section 8 --release '' \
             --center "$center" \
             --name "$manfile" \
             "man/${manfile}.pod" "${outpath}/share/man/man8/${manfile}.8"
