@@ -10,14 +10,16 @@ def location_for(place, fake_version = nil)
   end
 end
 
-gem "beaker", *location_for(ENV['BEAKER_VERSION'] || '~> 3.12')
-gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || '~> 0.8')
-gem 'beaker-abs', '~> 0.2'
+gem "beaker", *location_for(ENV['BEAKER_VERSION'] || '~> 4.0')
+gem "beaker-puppet", *location_for(ENV['BEAKER_PUPPET_VERSION'] || ["~>1.0", ">= 1.0.1"])
+gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] || "~> 1.1")
+gem "beaker-abs", *location_for(ENV['BEAKER_ABS_VERSION'] || "~> 0.4")
+gem "beaker-vmpooler", *location_for(ENV['BEAKER_VMPOOLER_VERSION'] || "~> 1.3")
 unless ENV["BEAKER_TYPE"] == 'foss'
-  gem 'beaker-pe', '~> 1.23'
+  gem 'beaker-pe', '~> 2.0'
   gem 'scooter', *location_for(ENV['SCOOTER_VERSION'] || '~> 4.0')
 end
-gem 'rake', "~> 10.1"
+gem 'rake', '~> 12.3'
 gem 'rototiller', '= 0.1.0'
 
 if File.exists? "#{__FILE__}.local"
