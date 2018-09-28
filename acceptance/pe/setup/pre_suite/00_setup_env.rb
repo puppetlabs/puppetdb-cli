@@ -1,4 +1,5 @@
 require 'json'
+require 'beaker-pe'
 
 # Copies puppet ca from master to host
 #
