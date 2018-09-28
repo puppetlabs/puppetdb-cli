@@ -47,6 +47,12 @@ step 'create puppet-access config file on client node' do
 end
 
 step "Install PE Client Tools" do
+  # Remove this hack once made in beaker-pe.
+  variant, version, arch, codename = client['platform'].to_array
+  if variant == 'ubuntu' && version.split('.').first.to_i >= 18
+    on client, "echo 'Acquire::AllowInsecureRepositories \"true\";' > /etc/apt/apt.conf.d/90insecure"
+  end
+
   opts = {
     :puppet_collection       => 'PC1',
     :pe_client_tools_sha     => ENV['SHA'],
