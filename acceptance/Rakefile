@@ -19,28 +19,18 @@ task :host_config do
   sh "cat hosts.cfg"
 end
 
-desc 'Check the redis version if Jenkins'
-task :check_redis_pe_ver do
-  if !ENV['BEAKER_PE_VER']
-    ENV['BEAKER_PE_VER'] = `redis-cli -h redis.delivery.puppetlabs.net get #{ENV['PE_FAMILY']}_pe_version`.strip
-  else
-    warn 'BEAKER_PE_VER already set, skipping check with redis'
-  end
-end
-
 desc "Run beaker based acceptance tests"
 task acceptance: :host_config
-task acceptance: :check_redis_pe_ver unless ENV["BEAKER_TYPE"] == 'foss'
 task :acceptance do
 
-  #fail if SHA not present
-  fail "SHA must be set in order to setup repositories!!!" if !ENV['SHA']
+  # fail if SHA not present
+  fail "SHA must be set in order to setup repositories!!!" if ENV["BEAKER_TYPE"] == "pe" && !ENV['SHA']
 
   # hardcode the pe_dir into the repo instead of the jenkins job
   ENV['BEAKER_PE_DIR'] = "http://enterprise.delivery.puppetlabs.net/#{ENV['PE_FAMILY']}/ci-ready" unless ENV["BEAKER_TYPE"] == 'foss'
 
   config = ENV["BEAKER_CONFIG"] || 'hosts.cfg'
-  preserve_hosts = ENV["BEAKER_PRESERVEHOSTS"] || 'onfail'
+  preserve_hosts = ENV["BEAKER_PRESERVE_HOSTS"] || 'onfail'
   type = ENV["BEAKER_TYPE"] || 'pe'
   keyfile = ENV["BEAKER_KEYFILE"] || "#{ENV['HOME']}/.ssh/id_rsa-acceptance"
   test_suite = ENV["BEAKER_TESTSUITE"] || "#{type}/tests/"
@@ -73,7 +63,7 @@ namespace :ci do
           {:name => '--no-color', :is_boolean => true},
           {:name => '--debug', :is_boolean => true},
           {:name => '--hosts', :override_env => 'BEAKER_HOSTS'},
-          {:name => '--preserve-hosts', :default => 'onfail', :override_env => 'BEAKER_PRESERVEHOSTS'},
+          {:name => '--preserve-hosts', :default => 'onfail', :override_env => 'BEAKER_PRESERVE_HOSTS'},
           {:name => '--keyfile', :default => "#{ENV['HOME']}/.ssh/id_rsa-acceptance", :override_env => 'BEAKER_KEYFILE'},
           {:name => '--pre-suite', :default => 'pe/setup/pre_suite', :override_env => 'BEAKER_PRESUITE'},
           {:name => '--tests', :default => 'pe/tests', :override_env => 'BEAKER_TESTSUITE'},

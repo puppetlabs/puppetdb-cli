@@ -1,22 +1,57 @@
-version: 1.3.0.{build}
+---
+# version: 1.0.{build}-{branch}
+
 environment:
-  OPENSSL_LIBS: ssleay32:libeay32
+  LOG_SPEC_ORDER: true
   matrix:
-  - TARGET: i686-pc-windows-gnu
-    OPENSSL_DIR: C:\OpenSSL-Win32
-  - TARGET: x86_64-pc-windows-msvc
-    OPENSSL_DIR: C:\OpenSSL-Win64
+    # FIXME: enable ruby 2.5 on windows once puppet and puppet-module gems have unpinned ffi
+    # - RUBY_VERSION: 25-x64
+    #   USE_MSYS: true
+    #   SUITES: "spec"
+    #   BUNDLE_JOBS: 4
+    - RUBY_VERSION: 25-x64
+      USE_MSYS: true
+      SUITES: "spec"
+      BUNDLE_JOBS: 1
+    - RUBY_VERSION: 25-x64
+      USE_CYGWIN: true
+      SUITES: "spec"
+      BUNDLE_JOBS: 1
+    - RUBY_VERSION: 23-x64
+      USE_CYGWIN: true
+      SUITES: "spec"
+      BUNDLE_JOBS: 1
+
 install:
-  - ps: wget "https://static.rust-lang.org/dist/rust-1.23.0-${env:TARGET}.exe" -OutFile "$pwd\Rust.exe"
-  - Rust.exe /VERYSILENT /NORESTART /DIR="C:\Program Files (x86)\Rust"
-  - SET PATH=%PATH%;C:\Program Files (x86)\Rust\bin
-  - SET PATH=%PATH%;C:\MinGW\bin
-  - rustc -V
-  - cargo -V
+  - ps: |
+      if ($ENV:USE_MSYS -ne $Null) {
+        Push-Location "C:\Ruby${ENV:RUBY_VERSION}\bin"
+        .\ridk.ps1 install 2 3
+        .\ridk.ps1 enable
+        Pop-Location
+      }
+      ElseIf ($ENV:USE_CYGWIN) {
+        $ENV:PATH = "C:\Ruby${ENV:RUBY_VERSION}\bin;C:\mingw-w64\x86_64-6.3.0-posix-seh-rt_v5-rev1\mingw64\bin;" + $ENV:PATH
+      }
+  - ps: |
+      $CACertFile = Join-Path -Path $ENV:AppData -ChildPath "RubyCACert.pem"
+      If (-Not (Test-Path -Path $CACertFile)) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri "https://curl.haxx.se/ca/cacert.pem" -UseBasicParsing -OutFile $CACertFile | Out-Null
+      }
+      $ENV:SSL_CERT_FILE = $CACertFile
+  - echo %PATH%
+  - bundle install --retry 2
 
-build: false
+build: off
 
-# Don't run doctests due to rust-lang/cargo#1592
+branches:
+  only:
+    - master
+
+before_test:
+  - bundle env
+  - type Gemfile.lock
+
 test_script:
-  - cargo build --verbose
-  - cargo test --verbose
+- bundle exec rake %SUITES%

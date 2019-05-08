@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'puppetdb_cli'
+
+begin
+  PuppetDBCLI.run(ARGV.unshift('db'))
+rescue Interrupt
+  warn "\nAborted!"
+  exit 1
+end

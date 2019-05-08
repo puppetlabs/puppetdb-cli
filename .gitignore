@@ -1,6 +1,3 @@
-# Rust
-target
-
 # Misc files
 *.swp
 .DS_Store
@@ -14,3 +11,17 @@ acceptance/junit/
 acceptance/log/
 acceptance/hosts.cfg
 acceptance/tmp/
+
+# Ruby
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/vendor/
+
+# rspec failure tracking
+.rspec_status

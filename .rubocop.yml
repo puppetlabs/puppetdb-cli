@@ -1,0 +1,21 @@
+AllCops:
+  Include:
+    - lib/**/*.rb
+    - spec/**/*.rb
+    - acceptance/foss/**/*.rb
+    - exe/**/*.rb
+  Exclude:
+    - vendor/**/*
+    - acceptance/vendor/**/*
+  TargetRubyVersion: 2.3
+Style/ClassAndModuleChildren:
+  Exclude:
+    - lib/**/*
+    - spec/**/*
+    - acceptance/**/*
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - puppetdb_cli.gemspec
+Metrics/LineLength:
+  Max: 120
