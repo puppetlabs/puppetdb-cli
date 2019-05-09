@@ -6,11 +6,10 @@
 > **Note**: This repository is still under active development. Stay tuned for
 > release dates and functionality changes.
 
-The PuppetDB CLI project provide Puppet subcommands for querying PuppetDB data,
+The PuppetDB CLI project provides Puppet subcommands for querying PuppetDB data,
 via `puppet query <query>`, and PuppetDB administrative tasks, `puppet db
 <import|export|status>`. The `query` subcommand will allow you to query PuppetDB
-using either the upcoming PQL syntax of the traditional PuppetDB query syntax
-(also known as AST). The `db` subcommand is a replacement for the older
+using either PQL or AST syntax. The `db` subcommand is a replacement for the older
 `puppetdb <export|import>` commands with faster startup times and much
 friendlier error messages.
 
@@ -22,30 +21,27 @@ and greater.
 
 ## Installation
 
-Please see
-[the PuppetDB documentation](https://docs.puppet.com/puppetdb/latest/pdb_client_tools.html)
-for instructions on how to install the `puppet-client-tools` package.
+### Prerequisites
 
-## Installation from source
+* Ruby
 
-Using `rustc` and `cargo` (stable, beta, or nightly):
+### Installation from rubygems
+
+The PuppetDB CLI can be installed via a `gem install`.
 
 ```bash
-
-  $ export PATH=./target/debug:$PATH
-  $ cargo build
-  
+gem install --bindir /opt/puppetlabs/bin puppetdb_cli
 ```
 
-When building on OSX or Windows you will also need to install openssl and use
-that for building the PuppetDB CLI. For OSX users the simplest way to do this is
-using Homebrew and running the following commands before the `cargo build`:
+If the machine does not have Puppet installed, you can simply use `gem install puppetdb_cli`
+and use the `puppet-query` and `puppet-db` executables directly.
+
+### Installation from source
+
+From the cloned repository
 
 ```bash
-
-  $ export OPENSSL_LIB_DIR=$(brew --prefix)/lib
-  $ export OPENSSL_INCLUDE_DIR=$(brew --prefix)/include
-
+bundle exec rake install
 ```
 
 ## Usage
@@ -53,7 +49,6 @@ using Homebrew and running the following commands before the `cargo build`:
 Example usage:
 
 ```bash
-
 $ puppet-query 'nodes[certname]{}'
 [
   {
@@ -88,7 +83,6 @@ $ puppet-db status
     "status": {}
   }
 }
-
 ```
 
 ## Configuration
