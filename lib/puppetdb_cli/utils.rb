@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'puppetdb_cli/utils/default_options'
+
 # Utils for PuppetDBCLI
 #
 # Primarily used for interaction with the PuppetDB::Client
