@@ -6,18 +6,14 @@ require 'json'
 #
 # The query command submits queries to /pdb/query/v4
 module PuppetDBCLI
-  @query_cmd = @base_cmd.define_command do
-    name 'query'
-    usage 'query [options] <query>'
-    summary 'Query puppetdb with AST or PQL'
+  @query_cmd = @base_cmd.define_command do |dsl|
+    dsl.name 'query'
+    dsl.usage 'query [options] <query>'
+    dsl.summary 'Query puppetdb with AST or PQL'
 
-    flag :h, :help, 'Show help for this command.' do |_, c|
-      c.add_command Cri::Command.new_basic_help
-      puts c.help
-      exit 0
-    end
+    PuppetDBCLI::Utils::DefaultOptions.include_default_options(dsl)
 
-    run do |opts, args, cmd|
+    dsl.run do |opts, args, cmd|
       PuppetDBCLI::Utils.log_command_start cmd.name, opts, args
 
       if args.count.zero?

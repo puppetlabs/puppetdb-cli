@@ -19,32 +19,6 @@ module PuppetDBCLI
     summary 'PuppetDB CLI'
     description 'A command line tool for interacting with PuppetDB'
     default_subcommand 'help'
-
-    flag :v, :version, 'Show version of puppetdb cli tool.' do |_, _|
-      puts PuppetDBCLI::VERSION
-      exit 0
-    end
-
-    flag :h, :help, 'Show help for this command.' do |_, c|
-      puts c.help
-      exit 0
-    end
-
-    flag :d, :debug, 'Enable debug output.' do |_, _|
-      PuppetDBCLI.logger.enable_debug_mode
-    end
-
-    option :c, :config, 'The path to the PuppetDB CLI config', argument: :required
-
-    option nil, :urls, 'The urls of your PuppetDB instances (overrides SERVER_URLS).', argument: :required
-
-    option nil, :cacert, 'Overrides the path for the Puppet CA cert', argument: :required
-
-    option nil, :cert, 'Overrides the path for the Puppet client cert.', argument: :required
-
-    option nil, :key, 'Overrides the path for the Puppet client private key.', argument: :required
-
-    option nil, :token, 'Overrides the path for the RBAC token (PE only).', argument: :required
   end
 
   require 'puppetdb_cli/query'

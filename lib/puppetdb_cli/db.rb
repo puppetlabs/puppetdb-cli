@@ -5,16 +5,13 @@
 # This subcommand has no functionalty other than --help. It's purpose is to contain
 # subcommands for compatibility with usage as 'puppet db'.
 module PuppetDBCLI
-  @db_cmd = @base_cmd.define_command do
-    name 'db'
-    usage 'db [options] <subcommand>'
-    summary 'manage PuppetDB administrative tasks'
-    default_subcommand 'help'
+  @db_cmd = @base_cmd.define_command do |dsl|
+    dsl.name 'db'
+    dsl.usage 'db [options] <subcommand>'
+    dsl.summary 'manage PuppetDB administrative tasks'
+    dsl.default_subcommand 'help'
 
-    flag :h, :help, 'Show help for this command.' do |_, c|
-      puts c.help
-      exit 0
-    end
+    PuppetDBCLI::Utils::DefaultOptions.include_default_options(dsl)
   end
 
   @db_cmd.add_command Cri::Command.new_basic_help
