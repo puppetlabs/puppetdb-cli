@@ -21,7 +21,7 @@ module PuppetDBCLI
     usage 'export [options] <path>'
     summary 'export an archive from PuppetDB'
 
-    option :a, :anonymization, 'Archive anonymization profile (low, moderate, high)',
+    option :a, :anonymization, 'Archive anonymization profile (low, moderate, full)',
            default: :none,
            argument: :required,
            transform: AnonymizationTransformer.new
