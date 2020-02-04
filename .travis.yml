@@ -2,9 +2,10 @@ language: rust
 matrix:
     fast_finish: true
     include:
-        - rust: nightly
-        - rust: beta
-        - rust: stable
+        # Version in appveyor
+        - rust: 1.23.0
+        # Version we build and ship pe-client-tools with
+        - rust: 1.18.0
 
 sudo: false
 
