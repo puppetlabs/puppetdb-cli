@@ -2,6 +2,7 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/ip998jin18j4g0yv?svg=true)](https://ci.appveyor.com/project/puppetlabs/puppetdb-cli)
 [![Build Status](https://travis-ci.org/puppetlabs/puppetdb-cli.svg)](https://travis-ci.org/puppetlabs/puppetdb-cli)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fpuppetlabs%2Fpuppetdb-cli.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fpuppetlabs%2Fpuppetdb-cli?ref=badge_shield)
 
 > **Note**: This repository is still under active development. Stay tuned for
 > release dates and functionality changes.
@@ -119,3 +120,7 @@ The format of the config file can be deduced from the following example.
     }
   }
 ```
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fpuppetlabs%2Fpuppetdb-cli.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fpuppetlabs%2Fpuppetdb-cli?ref=badge_large)
