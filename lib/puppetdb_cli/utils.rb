@@ -19,6 +19,11 @@ module PuppetDBCLI::Utils
       key: cli_opts[:key],
       cert: cli_opts[:cert],
       cacert: cli_opts[:cacert],
+      pem: {
+        'key'     => cli_opts[:key],
+        'cert'    => cli_opts[:cert],
+        'ca_file' => cli_opts[:cacert],
+      },
       token_file: cli_opts[:token]
     }.delete_if { |_, v| v.nil? }
   end
@@ -40,7 +45,7 @@ module PuppetDBCLI::Utils
   def self.send_query(client, query)
     PuppetDBCLI.logger.debug "Sending query request '#{query}'"
 
-    client.request('', query, query_mode: :failover)
+    client.request('', query)
   rescue SocketError => e
     PuppetDBCLI.logger.fatal e.message
     exit 1
