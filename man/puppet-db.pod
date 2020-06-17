@@ -1,0 +1,128 @@
+=head1 NAME
+
+puppet db - manage PuppetDB administrative tasks
+
+=head1 SYNOPSIS
+
+puppet-db [options] <action> [arguments]
+
+=head1 DESCRIPTION
+
+The C<puppet-db> tool allows you to perform PuppetDB administrative tasks such
+as exporting and anonymizing a backup of your PuppetDB or importing a backup to
+a PuppetDB. To learn more about the archive format and these administrative
+tasks in general, consult our documentation at:
+[http://docs.puppetlabs.com/puppetdb/master/anonymization.html]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h>,B<--help>
+
+Prints a list of the commands and a brief synopsis of each command. If
+an action is specified, it will print a description of that action and
+the options specific to that action.
+
+=item B<--version>
+
+Displays version information
+
+=item B<-c>,B<--config> <path>
+
+Overrides the path for the PuppetDB CLI config. For more information about
+PuppetDB CLI configuration, see puppetdb_conf(8).
+Default: ~/.puppetlabs/client-tools/puppetdb.conf
+
+=item B<--urls> <str>
+
+Overrides the SERVER_URLS setting for the PuppetDB service. These urls points to
+your PuppetDB instances. You can specify multiple urls as a comma-delimitted
+list, 'http://foo:8080,http://bar.com:8080'.
+
+=item B<--cacert> <path>
+
+Overrides the path for the Puppet CA cert.
+
+=item B<--cert> <path>
+
+Overrides the path for the Puppet client cert.
+
+=item B<--key> <path>
+
+Overrides the path for the Puppet client private key.
+
+=item B<--token> <path>
+
+Overrides the path for the RBAC token (PE only).
+
+=back
+
+=head1 ACTIONS
+
+  $ puppet-db export [options]
+      The export action will export a PuppetDB archive from PuppetDB. The
+      default location of this archive will be './pdb-export.tgz' relative to
+      wherever the command was run from. You can specify a different location to
+      export as an optional argument. Additionally you can specify what level of
+      anonymization you want for your archive using the '--anonymization <str>'
+      flag, for more information about PuppetDB archive anonymization, consult
+      the documentation at:
+      [http://docs.puppetlabs.com/puppetdb/master/anonymization.html]
+
+  $ puppet-db import <path>
+      The import action will import a PuppetDB archive to PuppetDB. You must
+      specify the location of the archive to the import action as a path.
+
+  $ puppet-db status
+      The status action will query the PuppetDB status endpoint (for each
+      configured PuppetDB) and return a map from PuppetDB host to the status for
+      that PuppetDB. For more information about the PuppetDB status endpoint
+      see: [https://docs.puppet.com/puppetdb/latest/api/status/v1/status.html]
+
+=head1 SEE ALSO
+
+puppet-db(8), puppetdb_conf(8)
+
+=head1 EXAMPLES
+
+    --------------------------------------------------------------------
+    Example #1 - Export a PuppetDB archive:
+
+    $ puppet-db export ./my-pdb-export.tgz
+    Exporting PuppetDB...
+    Finished exporting PuppetDB archive to ./my-pdb-export.tgz.
+
+    --------------------------------------------------------------------
+    Example #2 - Import a PuppetDB archive:
+
+    $ puppet-db import ./my-pdb-export.tgz
+    Importing ./my-pdb-export.tgz to PuppetDB...
+    Finished importing ./my-pdb-export.tgz to PuppetDB.
+
+    --------------------------------------------------------------------
+    Example #3 - Query for the status of PuppetDB:
+
+    $ puppet-db status
+    {
+      "puppetdb-status": {
+        "service_version": "4.0.0-SNAPSHOT",
+        "service_status_version": 1,
+        "detail_level": "info",
+        "state": "running",
+        "status": {
+          "maintenance_mode?": false,
+          "queue_depth": 0,
+          "read_db_up?": true,
+          "write_db_up?": true
+        }
+      },
+      "status-service": {
+        "service_version": "0.3.1",
+        "service_status_version": 1,
+        "detail_level": "info",
+        "state": "running",
+        "status": {}
+      }
+    }
+

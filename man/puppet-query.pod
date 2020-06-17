@@ -1,0 +1,84 @@
+=head1 NAME
+
+puppet query - perform ad hoc queries against PuppetDB
+
+=head1 SYNOPSIS
+
+puppet-query [options] <query>
+
+=head1 DESCRIPTION
+
+The C<puppet-query> tool allows you to query PuppetDB using either the AST or
+PQL query languages. To read more about the syntax of PuppetDB queries, please
+consult the documentation at:
+[http://docs.puppetlabs.com/puppetdb/master/api/query/v4/pql.html]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h>,B<--help>
+
+Prints a list of the commands and a brief synopsis of each command. If
+an action is specified, it will print a description of that action and
+the options specific to that action.
+
+=item B<--version>
+
+Displays version information
+
+=item B<-c>,B<--config> <path>
+
+Overrides the path for the PuppetDB CLI config. For more information about
+PuppetDB CLI configuration, see puppetdb_conf(8).
+Default: ~/.puppetlabs/client-tools/puppetdb.conf
+
+=item B<--urls> <str>
+
+Overrides the SERVER_URLS setting for the PuppetDB service. These urls points to
+your PuppetDB instances. You can specify multiple urls as a comma-delimitted
+list, 'http://foo:8080,http://bar.com:8080'.
+
+=item B<--cacert> <path>
+
+Overrides the path for the Puppet CA cert.
+
+=item B<--cert> <path>
+
+Overrides the path for the Puppet client cert.
+
+=item B<--key> <path>
+
+Overrides the path for the Puppet client private key.
+
+=item B<--token> <path>
+
+Overrides the path for the RBAC token (PE only).
+
+=back
+
+=head1 SEE ALSO
+
+puppet-db(8), puppetdb_conf(8)
+
+=head1 EXAMPLES
+
+  ----------------------------------------------------------------------
+  $ puppet-query "nodes { certname = 'host-1' }"
+
+  [
+   {
+      "catalog_environment": "production",
+      "catalog_timestamp": "2016-01-28T18:26:04.023Z",
+      "certname": "host-0",
+      "deactivated": null,
+      "expired": null,
+      "facts_environment": "production",
+      "facts_timestamp": "2016-01-28T18:26:02.589Z",
+      "latest_report_hash": "2638652161207e7606d7d2461538d2dae883237b",
+      "latest_report_status": "failed",
+      "report_environment": "production",
+      "report_timestamp": "2016-01-28T18:13:02.405Z"
+   }
+  ]
+

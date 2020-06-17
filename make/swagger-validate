@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -o errexit
+
+GIT_ROOT=${GIT_ROOT:-$(git rev-parse --show-toplevel)}
+
+. make/include/colors
+
+printf "%b==> Validating swagger interface definition %b\n" "${OK_COLOR}" "${ERROR_COLOR}"
+
+swagger validate ${GIT_ROOT}/api/api.yaml
+
+printf "%b" "${NO_COLOR}"

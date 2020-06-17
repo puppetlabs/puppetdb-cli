@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -o errexit
+
+GIT_ROOT=${GIT_ROOT:-$(git rev-parse --show-toplevel)}
+
+. make/include/colors
+
+printf "%b==> Testing %b\n" "${OK_COLOR}" "${NO_COLOR}"
+
+go test -race -cover $(go list -f '{{ .ImportPath }}' ./...)

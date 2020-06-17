@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -o errexit
+
+. make/include/colors
+
+printf "%b==> Formatting %b\n" "${OK_COLOR}" "${ERROR_COLOR}"
+
+ISSUES=$(mktemp)
+
+trap "cat ${ISSUES} ; rm -f ${ISSUES}" EXIT
+
+go list -f '{{ .Dir }}' ./... | while read DIR; do
+    goimports -d -e "${DIR}"/*.go >> "${ISSUES}"
+done
+
+printf "%b" "${NO_COLOR}"
+
+test ! -s "${ISSUES}"

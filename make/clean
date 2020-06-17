@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -o errexit -o nounset
+
+. make/include/colors
+
+printf "%b==> Cleaning %b\n" "${OK_COLOR}" "${ERROR_COLOR}"
+
+GIT_ROOT=${GIT_ROOT:-$(git rev-parse --show-toplevel)}
+
+rm -rf ${GIT_ROOT}/build
+
+printf "%b" "${NO_COLOR}"
