@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -o errexit
+
+GIT_ROOT=${GIT_ROOT:-$(git rev-parse --show-toplevel)}
+
+set +o errexit
+
+. ${GIT_ROOT}/make/include/versioning
+
+. make/include/colors
+
+printf "%b==> Building %b\n" "${OK_COLOR}" "${NO_COLOR}"
+
+OSES="${OSES:-linux darwin windows}"
+GOARCH=${GOARCH:-$(go env GOARCH)}
+
+for OS in ${OSES}; do
+  [ ${OS} = windows ] && EXTENSION=".exe"
+  GOOS="${OS}" go build -ldflags="${LDFLAGS} -X 'main.Version=${ARTIFACT_VERSION}'" -o "build/${OS}-${GOARCH}/puppet-db${EXTENSION}" ./cmd/puppet-db
+  GOOS="${OS}" go build -ldflags="${LDFLAGS} -X 'main.Version=${ARTIFACT_VERSION}'" -o "build/${OS}-${GOARCH}/puppet-query${EXTENSION}" ./cmd/puppet-query
+done
