@@ -17,21 +17,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
       with:
+        fetch-depth: 0
         path: ./src/github.com/puppetlabs/puppetdb-cli/
     - name: Install pre-requisites
       if: matrix.platform == 'ubuntu-latest'
       run: go get -u golang.org/x/tools/cmd/goimports golang.org/x/lint/golint
     - name: Format
       if: matrix.platform == 'ubuntu-latest'
-      run: cd ./src/github.com/puppetlabs/puppetdb-cli/ && make format
+      run: cd ./src/github.com/puppetlabs/puppetdb-cli && make format
     - name: Vet
       if: matrix.platform == 'ubuntu-latest'
-      run: cd ./src/github.com/puppetlabs/puppetdb-cli/ && make vet
+      run: cd ./src/github.com/puppetlabs/puppetdb-cli && make vet
     - name: Lint
       if: matrix.platform == 'ubuntu-latest'
-      run: cd ./src/github.com/puppetlabs/puppetdb-cli/ && make lint
+      run: cd ./src/github.com/puppetlabs/puppetdb-cli && make lint
     - name: Build
-      run: go build ./src/github.com/puppetlabs/puppetdb-cli/
-    - name: test
-      run: go test ./src/github.com/puppetlabs/puppetdb-cli/...
+      run: go build ./src/github.com/puppetlabs/puppetdb-cli/cmd/puppet-db && go build ./src/github.com/puppetlabs/puppetdb-cli/cmd/puppet-query
+    - name: Test
+      run: cd ./src/github.com/puppetlabs/puppetdb-cli && make test
 
