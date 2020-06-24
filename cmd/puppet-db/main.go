@@ -1,9 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"os"
 )
 
+// Version of the application, to be overwritten from build command line
+var Version = "0.0.0"
+
 func main() {
-	fmt.Println("this be puppet-db")
+	if err := Execute(Version); err != nil {
+		os.Exit(1)
+	}
 }

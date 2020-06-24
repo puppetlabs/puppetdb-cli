@@ -1,0 +1,181 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "BE9X1dd1/VdIPGj9J2PHHFkLwlo=",
+			"path": "github.com/fsnotify/fsnotify",
+			"revision": "7f4cf4dd2b522a984eaca51d1ccee54101d3414a",
+			"revisionTime": "2020-04-17T21:56:12Z"
+		},
+		{
+			"checksumSHA1": "3+XuIzAHK8ZBu1y4kYxov6k56W0=",
+			"path": "github.com/hashicorp/hcl",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "XQmjDva9JCGGkIecOgwtBEMCJhU=",
+			"path": "github.com/hashicorp/hcl/hcl/ast",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "1GmX7G0Pgf5XprOh+T3zXMXX0dc=",
+			"path": "github.com/hashicorp/hcl/hcl/parser",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "encY+ZtDf4nJaMvsVL2c+EJ2r3Q=",
+			"path": "github.com/hashicorp/hcl/hcl/printer",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "+qJTCxhkwC7r+VZlPlZz8S74KmU=",
+			"path": "github.com/hashicorp/hcl/hcl/scanner",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "oS3SCN9Wd6D8/LG0Yx1fu84a7gI=",
+			"path": "github.com/hashicorp/hcl/hcl/strconv",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "c6yprzj06ASwCo18TtbbNNBHljA=",
+			"path": "github.com/hashicorp/hcl/hcl/token",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "PwlfXt7mFS8UYzWxOK5DOq0yxS0=",
+			"path": "github.com/hashicorp/hcl/json/parser",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "afrZ8VmAwfTdDAYVgNSXbxa4GsA=",
+			"path": "github.com/hashicorp/hcl/json/scanner",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "fNlXQCQEnb+B3k5UDL/r15xtSJY=",
+			"path": "github.com/hashicorp/hcl/json/token",
+			"revision": "569ae818ccb3cf7a7192e329771f8f940feecbba",
+			"revisionTime": "2020-04-22T21:46:39Z"
+		},
+		{
+			"checksumSHA1": "40vJyUB4ezQSn/NSadsKEOrudMc=",
+			"path": "github.com/inconshreveable/mousetrap",
+			"revision": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+			"revisionTime": "2014-10-17T20:07:13Z"
+		},
+		{
+			"checksumSHA1": "lzOvuDpXMkulllMejzgWt0OZ46Y=",
+			"path": "github.com/magiconair/properties",
+			"revision": "cfba716d4c41535b46bcf2269aa5762d571d0834",
+			"revisionTime": "2020-06-10T09:38:28Z"
+		},
+		{
+			"checksumSHA1": "RpGDzEK2L0oGw5U4+QdELfikcvQ=",
+			"path": "github.com/mitchellh/mapstructure",
+			"revision": "d16e9488127408e67948eb43b6d3fbb9f222da10",
+			"revisionTime": "2020-06-07T23:02:03Z"
+		},
+		{
+			"checksumSHA1": "8gO1EjTpPMkBDKugl89g2PIYjFY=",
+			"path": "github.com/pelletier/go-toml",
+			"revision": "88263a05ccde92c6548d8dce67102f2adedb4285",
+			"revisionTime": "2020-06-15T21:55:19Z"
+		},
+		{
+			"checksumSHA1": "XDHy1/QJhhtFOMoVpjHALKDzLEo=",
+			"path": "github.com/spf13/afero",
+			"revision": "1524d0a48baf070afc40a397f4ac0cfb0a490c92",
+			"revisionTime": "2020-05-31T13:38:23Z"
+		},
+		{
+			"checksumSHA1": "AKJClvrBqZOAWA5dR5sdJ7RUVY8=",
+			"path": "github.com/spf13/afero/mem",
+			"revision": "1524d0a48baf070afc40a397f4ac0cfb0a490c92",
+			"revisionTime": "2020-05-31T13:38:23Z"
+		},
+		{
+			"checksumSHA1": "F+hVO+9tHsRvFKkEy5/v7QIi+fI=",
+			"path": "github.com/spf13/cast",
+			"revision": "1ffadf551085444af981432dd0f6d1160c11ec64",
+			"revisionTime": "2019-12-17T18:07:01Z"
+		},
+		{
+			"checksumSHA1": "kNMssGIX8n0UJdWJ1Foy9VpOqQo=",
+			"path": "github.com/spf13/cobra",
+			"revision": "04318720db1743b8488c86b2f7dca6d9663cb2f2",
+			"revisionTime": "2020-06-16T20:49:26Z"
+		},
+		{
+			"checksumSHA1": "kmcWtDErtMPA3+o7+B4MDC3z+T0=",
+			"path": "github.com/spf13/jwalterweatherman",
+			"revision": "94f6ae3ed3bceceafa716478c5fbf8d29ca601a1",
+			"revisionTime": "2018-10-28T14:53:47Z"
+		},
+		{
+			"checksumSHA1": "PP+ThdmIWtgpXDDNZbUJZeiU5lQ=",
+			"path": "github.com/spf13/pflag",
+			"revision": "81378bbcd8a1005f72b1e8d7579e5dd7b2d612ab",
+			"revisionTime": "2020-05-04T14:38:53Z"
+		},
+		{
+			"checksumSHA1": "3o8mIdtX14nrwtNHP0vtgisHsCs=",
+			"path": "github.com/spf13/viper",
+			"revision": "13df72109047b6ae9c907bce81e327265d6d8a9c",
+			"revisionTime": "2020-05-09T09:42:39Z"
+		},
+		{
+			"checksumSHA1": "MZ4JU44HUXZ4JB+oxYrw9wpaOZU=",
+			"path": "github.com/subosito/gotenv",
+			"revision": "de67a6614a4de71ad5e380b6946e56ab957d58c5",
+			"revisionTime": "2019-09-17T10:36:37Z"
+		},
+		{
+			"checksumSHA1": "Ld0iviZSRGAKK6WSoti+3++1RmY=",
+			"path": "golang.org/x/sys/internal/unsafeheader",
+			"revision": "f1bc736245b146b19d485cdbc534f9a765257080",
+			"revisionTime": "2020-06-15T19:47:29Z"
+		},
+		{
+			"checksumSHA1": "vdzE+3LNjuZhyoJ6dHPuxD6zRXo=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "f1bc736245b146b19d485cdbc534f9a765257080",
+			"revisionTime": "2020-06-15T19:47:29Z"
+		},
+		{
+			"checksumSHA1": "cyTndUcU5NwdZciSFzbtKQsRLQA=",
+			"path": "golang.org/x/text/transform",
+			"revision": "23ae387dee1f90d29a23c0e87ee0b46038fbed0e",
+			"revisionTime": "2020-06-11T18:50:30Z"
+		},
+		{
+			"checksumSHA1": "1C/qZEW+DDmMf7Y823CMSbhMA0A=",
+			"path": "golang.org/x/text/unicode/norm",
+			"revision": "23ae387dee1f90d29a23c0e87ee0b46038fbed0e",
+			"revisionTime": "2020-06-11T18:50:30Z"
+		},
+		{
+			"checksumSHA1": "fXXRaGxLTDARkivDR6s1WSQoJxo=",
+			"path": "gopkg.in/ini.v1",
+			"revision": "1fc6efb6f20ef065ae00baf7f4fa7722cad0ec34",
+			"revisionTime": "2020-05-28T05:00:39Z"
+		},
+		{
+			"checksumSHA1": "wZxi5gt6Zfs4vh8795dNA/lva7g=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "0b1645d91e851e735d3e23330303ce81f70adbe3",
+			"revisionTime": "2020-05-06T23:08:38Z"
+		}
+	],
+	"rootPath": "github.com/puppetlabs/puppetdb-cli"
+}
