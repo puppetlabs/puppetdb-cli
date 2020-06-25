@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/puppetlabs/puppetdb-cli/log"
 	"github.com/spf13/cobra"
 )
 
@@ -155,6 +157,14 @@ func setCmdFlags(cmd *cobra.Command) {
 }
 
 func validateGlobalFlags(cmd *cobra.Command) error {
+	logLevel, err := cmd.Flags().GetString("log-level")
+	if err != nil {
+		return err
+	}
+	if err := log.SetLogLevel(strings.ToLower(logLevel)); err != nil {
+		return err
+	}
+	log.Debug(fmt.Sprintf("Log level changed to: %s", logLevel))
 	return nil
 }
 

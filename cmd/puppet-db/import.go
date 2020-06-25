@@ -17,6 +17,5 @@ func init() {
 }
 
 func executeImportCommand(cmd *cobra.Command, args []string) {
-	// return errors.New("not implemented").Error()
 	fmt.Print("not implemented")
 }
