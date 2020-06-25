@@ -172,25 +172,26 @@ func initConfig(cfgFile string) {
 }
 
 func readConfigFile(cfgFile string) error {
-	if cfgFile != "" {
-		return readCommandLineConfigFile(cfgFile)
-	}
-
 	err := readGlobalConfigFile()
 	if err != nil {
 		return err
 	}
+
+	if cfgFile != "" {
+		return mergeCommandLineConfigFile(cfgFile)
+	}
+
 	return mergeUserConfigFile()
 }
 
-func readCommandLineConfigFile(cfgFile string) error {
+func mergeCommandLineConfigFile(cfgFile string) error {
 	_, err := os.Stat(cfgFile)
 	if err != nil {
 		log.Error("Configuration file does not exist") // used in tests
 		return err
 	}
 	viper.SetConfigFile(cfgFile)
-	return viper.ReadInConfig()
+	return viper.MergeInConfig()
 }
 
 func readGlobalConfigFile() error {
