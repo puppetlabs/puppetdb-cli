@@ -14,7 +14,7 @@ func fixturePath() string {
 	if err != nil {
 		panic(err)
 	}
-	return filepath.Join(filepath.Dir(filepath.Dir(path)), "acceptance", "fixtures")
+	return filepath.Join(filepath.Dir(filepath.Dir(path)), "testdata")
 }
 
 func TestCanReadAndAliasConfigParameters(t *testing.T) {
