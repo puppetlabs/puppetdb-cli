@@ -17,6 +17,24 @@ func fixturePath() string {
 	return filepath.Join(filepath.Dir(filepath.Dir(path)), "testdata")
 }
 
+func TestGlobalConfigFileAbsent(t *testing.T) {
+	assert := assert.New(t)
+	err := readGlobalConfigFile()
+	assert.NoError(err)
+}
+
+func TestDefaultConfigFileAbsent(t *testing.T) {
+	assert := assert.New(t)
+	err := readConfigFile(getDefaultConfig())
+	assert.NoError(err)
+}
+
+func TestCLIConfigFileAbsent(t *testing.T) {
+	assert := assert.New(t)
+	err := readConfigFile("/path/to/absent/config")
+	assert.Error(err)
+}
+
 func TestCanReadAndAliasConfigParameters(t *testing.T) {
 	assert := assert.New(t)
 	initConfig(filepath.Join(fixturePath(), "puppetdb.conf"))

@@ -125,8 +125,8 @@ func setCmdFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringP(
 		"config",
 		"c",
-		"",
-		"`Path` to CLI config, defaults to $HOME/.puppetlabs/client-tools/puppetdb.conf",
+		getDefaultConfig(),
+		"`Path` to CLI config",
 	)
 	cmd.PersistentFlags().StringSliceVarP(
 		&urls,
@@ -177,55 +177,56 @@ func readConfigFile(cfgFile string) error {
 		return err
 	}
 
-	if cfgFile != "" {
-		return mergeCommandLineConfigFile(cfgFile)
-	}
-
-	return mergeUserConfigFile()
+	return mergeUserConfigFile(cfgFile)
 }
 
-func mergeCommandLineConfigFile(cfgFile string) error {
-	_, err := os.Stat(cfgFile)
+func getGlobalConfigFile() (string, error) {
+	puppetLabsDir, err := PuppetLabsDir()
 	if err != nil {
-		log.Error("Configuration file does not exist") // used in tests
-		return err
+		return puppetLabsDir, err
 	}
-	viper.SetConfigFile(cfgFile)
-	return viper.MergeInConfig()
+
+	globalConfigFile := filepath.Join(puppetLabsDir, "client-tools", "puppet-code.conf")
+	return globalConfigFile, nil
 }
 
 func readGlobalConfigFile() error {
-	puppetLabsDir, err := PuppetLabsDir()
+	globalConfigFile, err := getGlobalConfigFile()
 	if err != nil {
 		return err
 	}
 
-	globalConfigFile := filepath.Join(puppetLabsDir, "client-tools", "puppetdb.conf")
-
 	_, err = os.Stat(globalConfigFile)
 	if err != nil {
-		log.Debug(err.Error())
+		log.Debug(fmt.Sprintf("Failed reading global config file: %s", err.Error()))
 		return nil
 	}
 	viper.SetConfigFile(globalConfigFile)
 	return viper.ReadInConfig()
 }
 
-func mergeUserConfigFile() error {
+func getDefaultConfig() string {
 	usr, err := user.Current()
 	if err != nil {
 		log.Error(err.Error())
+		return ""
+	}
+
+	configFile := filepath.Join(usr.HomeDir, ".puppetlabs", "client-tools", "puppetdb.conf")
+	return configFile
+}
+
+func mergeUserConfigFile(cfgFile string) error {
+	_, err := os.Stat(cfgFile)
+	if err != nil {
+		if cfgFile == getDefaultConfig() {
+			log.Debug(fmt.Sprintf("Failed reading default config file: %s", err.Error()))
+			return nil
+		}
+		log.Error(fmt.Sprintf("Failed reading CLI config file: %s", err.Error()))
 		return err
 	}
-
-	localConfigFile := filepath.Join(usr.HomeDir, ".puppetlabs", "client-tools", "puppetdb.conf")
-
-	_, err = os.Stat(localConfigFile)
-	if err != nil {
-		log.Debug(err.Error())
-		return nil
-	}
-	viper.SetConfigFile(localConfigFile)
+	viper.SetConfigFile(cfgFile)
 	return viper.MergeInConfig()
 }
 
@@ -270,7 +271,7 @@ func getDefaultUrls() []string {
 func getDefaultCacert() string {
 	puppetLabsDir, err := PuppetLabsDir()
 	if err != nil {
-		// log.Error(err.Error())
+		log.Error(err.Error())
 		return ""
 	}
 
