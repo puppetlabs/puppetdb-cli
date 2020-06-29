@@ -2,16 +2,20 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
+	"os"
+	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/puppetlabs/puppetdb-cli/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
+	urls    []string
 	rootCmd = &cobra.Command{
 		Use:   "puppet-db [flags] [options]",
 		Short: "puppet-db.",
@@ -22,7 +26,6 @@ var (
 )
 
 func init() {
-
 	rootCmd.Flags().SortFlags = false
 	rootCmd.SetHelpCommand(&cobra.Command{
 		Use:    "no-help",
@@ -32,6 +35,8 @@ func init() {
 	rootCmd.Flags().BoolP("help", "h", false, "Show this screen.")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version.")
 	setCmdFlags(rootCmd)
+	registerConfigAliases()
+	bindConfigFlags(rootCmd)
 	customizeUsage(rootCmd)
 }
 
@@ -121,9 +126,10 @@ func setCmdFlags(cmd *cobra.Command) {
 		"config",
 		"c",
 		getDefaultConfig(),
-		"`Path` to CLI config, defaults to $HOME/.puppetlabs/client-tools/puppetdb.conf",
+		"`Path` to CLI config",
 	)
-	cmd.PersistentFlags().StringP(
+	cmd.PersistentFlags().StringSliceVarP(
+		&urls,
 		"urls",
 		"u",
 		getDefaultUrls(),
@@ -138,22 +144,90 @@ func setCmdFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringP(
 		"cert",
 		"",
-		getDefaultCert(),
+		"",
 		"`Path` to client certificate for auth",
 	)
 	cmd.PersistentFlags().StringP(
 		"key",
 		"",
-		getDefaultKey(),
+		"",
 		"`Path` to client certificate for auth",
 	)
 
 	cmd.PersistentFlags().StringP(
 		"token",
 		"",
-		getDefaultToken(),
+		"",
 		"`Path` to RBAC token for auth (PE Only)",
 	)
+}
+
+func initConfig(cfgFile string) {
+	viper.SetConfigType("json")
+	err := readConfigFile(cfgFile)
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
+}
+
+func readConfigFile(cfgFile string) error {
+	err := readGlobalConfigFile()
+	if err != nil {
+		return err
+	}
+
+	return mergeUserConfigFile(cfgFile)
+}
+
+func getGlobalConfigFile() (string, error) {
+	puppetLabsDir, err := PuppetLabsDir()
+	if err != nil {
+		return puppetLabsDir, err
+	}
+
+	globalConfigFile := filepath.Join(puppetLabsDir, "client-tools", "puppet-code.conf")
+	return globalConfigFile, nil
+}
+
+func readGlobalConfigFile() error {
+	globalConfigFile, err := getGlobalConfigFile()
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(globalConfigFile)
+	if err != nil {
+		log.Debug(fmt.Sprintf("Failed reading global config file: %s", err.Error()))
+		return nil
+	}
+	viper.SetConfigFile(globalConfigFile)
+	return viper.ReadInConfig()
+}
+
+func getDefaultConfig() string {
+	usr, err := user.Current()
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
+
+	configFile := filepath.Join(usr.HomeDir, ".puppetlabs", "client-tools", "puppetdb.conf")
+	return configFile
+}
+
+func mergeUserConfigFile(cfgFile string) error {
+	_, err := os.Stat(cfgFile)
+	if err != nil {
+		if cfgFile == getDefaultConfig() {
+			log.Debug(fmt.Sprintf("Failed reading default config file: %s", err.Error()))
+			return nil
+		}
+		log.Error(fmt.Sprintf("Failed reading CLI config file: %s", err.Error()))
+		return err
+	}
+	viper.SetConfigFile(cfgFile)
+	return viper.MergeInConfig()
 }
 
 func validateGlobalFlags(cmd *cobra.Command) error {
@@ -165,29 +239,41 @@ func validateGlobalFlags(cmd *cobra.Command) error {
 		return err
 	}
 	log.Debug(fmt.Sprintf("Log level changed to: %s", logLevel))
+
+	cfgFile, err := cmd.Flags().GetString("config")
+	if err != nil {
+		return err
+	}
+	initConfig(cfgFile)
 	return nil
 }
 
-func getDefaultConfig() string {
-	return errors.New("not implemented").Error()
+func registerConfigAliases() {
+	viper.RegisterAlias("urls", "puppetdb.server_urls")
+	viper.RegisterAlias("cacert", "puppetdb.cacert")
+	viper.RegisterAlias("cert", "puppetdb.cert")
+	viper.RegisterAlias("key", "puppetdb.key")
+	viper.RegisterAlias("token", "puppetdb.token-file")
 }
 
-func getDefaultUrls() string {
-	return errors.New("not implemented").Error()
+func bindConfigFlags(cmd *cobra.Command) {
+	viper.BindPFlag("urls", cmd.PersistentFlags().Lookup("urls"))
+	viper.BindPFlag("cacert", cmd.PersistentFlags().Lookup("cacert"))
+	viper.BindPFlag("cert", cmd.PersistentFlags().Lookup("cert"))
+	viper.BindPFlag("key", cmd.PersistentFlags().Lookup("key"))
+	viper.BindPFlag("token", cmd.PersistentFlags().Lookup("token"))
+}
+
+func getDefaultUrls() []string {
+	return []string{"http://127.0.0.1:8080"}
 }
 
 func getDefaultCacert() string {
-	return errors.New("not implemented").Error()
-}
+	puppetLabsDir, err := PuppetLabsDir()
+	if err != nil {
+		log.Error(err.Error())
+		return ""
+	}
 
-func getDefaultCert() string {
-	return errors.New("not implemented").Error()
-}
-
-func getDefaultKey() string {
-	return errors.New("not implemented").Error()
-}
-
-func getDefaultToken() string {
-	return errors.New("not implemented").Error()
+	return filepath.Join(puppetLabsDir, "puppet", "ssl", "certs", "ca.pem")
 }

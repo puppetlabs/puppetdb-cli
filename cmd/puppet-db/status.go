@@ -21,5 +21,6 @@ func init() {
 }
 
 func executeStatusCommand(cmd *cobra.Command, args []string) {
-	fmt.Print("not implemented")
+	fmt.Println(viper.GetString("cacert"))
+	fmt.Println(viper.GetStringSlice("urls"))
 }
