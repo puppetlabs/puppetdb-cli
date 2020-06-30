@@ -157,7 +157,7 @@ func setCmdFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringP(
 		"token",
 		"",
-		"",
+		getDefaultToken(),
 		"`Path` to RBAC token for auth (PE Only)",
 	)
 }
@@ -276,4 +276,13 @@ func getDefaultCacert() string {
 	}
 
 	return filepath.Join(puppetLabsDir, "puppet", "ssl", "certs", "ca.pem")
+}
+
+func getDefaultToken() string {
+	usr, err := user.Current()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(usr.HomeDir, ".puppetlabs", "token")
 }

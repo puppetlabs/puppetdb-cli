@@ -1,9 +1,13 @@
 package app
 
+import "github.com/puppetlabs/puppetdb-cli/token"
+
 // PuppetDb interface
 type PuppetDb struct {
 	Version string
 	Options PuppetDbOptions
+
+	Token token.Token
 }
 
 // PuppetDbOptions stores all global options
