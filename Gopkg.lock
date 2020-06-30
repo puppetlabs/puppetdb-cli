@@ -18,6 +18,14 @@
   revision = "7f4cf4dd2b522a984eaca51d1ccee54101d3414a"
 
 [[projects]]
+  digest = "1:7ae311278f7ccaa724de8f2cdec0a507ba3ee6dea8c77237e8157bcf64b0f28b"
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  pruneopts = "UT"
+  revision = "3a35fb6e3e18b9dbfee291262260dee7372d2a92"
+  version = "v1.4.3"
+
+[[projects]]
   branch = "master"
   digest = "1:b11100217bdd426e86b46b5193d79844aef748baf63bc8034c225c725a9d2496"
   name = "github.com/hashicorp/hcl"
@@ -197,6 +205,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/golang/mock/gomock",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
