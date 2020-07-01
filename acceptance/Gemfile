@@ -16,7 +16,7 @@ gem "beaker-hostgenerator", *location_for(ENV['BEAKER_HOSTGENERATOR_VERSION'] ||
 gem "beaker-abs", *location_for(ENV['BEAKER_ABS_VERSION'] || "~> 0.4")
 gem "beaker-vmpooler", *location_for(ENV['BEAKER_VMPOOLER_VERSION'] || "~> 1.3")
 unless ENV["BEAKER_TYPE"] == 'foss'
-  gem 'beaker-pe'
+  gem 'beaker-pe', git: 'https://github.com/dorin-pleava/beaker-pe', branch: 'CT-123'
   gem 'scooter', *location_for(ENV['SCOOTER_VERSION'] || '~> 4.0')
 end
 gem 'rake', '~> 12.3'
