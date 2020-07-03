@@ -6,6 +6,8 @@ package operations
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"io"
+
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
 )
@@ -25,9 +27,45 @@ type Client struct {
 
 // ClientService is the interface for Client methods
 type ClientService interface {
+	GetExport(params *GetExportParams, authInfo runtime.ClientAuthInfoWriter, writer io.Writer) (*GetExportOK, error)
+
 	GetStatus(params *GetStatusParams, authInfo runtime.ClientAuthInfoWriter) (*GetStatusOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
+}
+
+/*
+  GetExport get export API
+*/
+func (a *Client) GetExport(params *GetExportParams, authInfo runtime.ClientAuthInfoWriter, writer io.Writer) (*GetExportOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetExportParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "getExport",
+		Method:             "GET",
+		PathPattern:        "/pdb/admin/v1/archive",
+		ProducesMediaTypes: []string{"application/gzip"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetExportReader{formats: a.formats, writer: writer},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*GetExportOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	unexpectedSuccess := result.(*GetExportDefault)
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 
 /*
