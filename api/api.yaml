@@ -26,6 +26,31 @@ paths:
           schema:
             $ref: '#/definitions/Error'
   /pdb/admin/v1/archive:
+    post:
+      operationId: 'postImport'
+      parameters:
+        - in: formData
+          name: archive
+          type: file
+          description: 'puppetdb archive to upload'
+      consumes:
+      - 'multipart/form-data'
+      produces:
+      - 'text/json'
+      responses:
+        200:
+          description: 'imported'
+          schema:
+            description: 'puppetdb import'
+            type: object
+            properties:
+              ok:
+                type: boolean
+                description: 'whether the operation succeeded'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
     get:
       operationId: 'getExport'
       parameters:

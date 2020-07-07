@@ -31,6 +31,8 @@ type ClientService interface {
 
 	GetStatus(params *GetStatusParams, authInfo runtime.ClientAuthInfoWriter) (*GetStatusOK, error)
 
+	PostImport(params *PostImportParams, authInfo runtime.ClientAuthInfoWriter) (*PostImportOK, error)
+
 	SetTransport(transport runtime.ClientTransport)
 }
 
@@ -99,6 +101,40 @@ func (a *Client) GetStatus(params *GetStatusParams, authInfo runtime.ClientAuthI
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*GetStatusDefault)
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+  PostImport post import API
+*/
+func (a *Client) PostImport(params *PostImportParams, authInfo runtime.ClientAuthInfoWriter) (*PostImportOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewPostImportParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "postImport",
+		Method:             "POST",
+		PathPattern:        "/pdb/admin/v1/archive",
+		ProducesMediaTypes: []string{"text/json"},
+		ConsumesMediaTypes: []string{"multipart/form-data"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &PostImportReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*PostImportOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	unexpectedSuccess := result.(*PostImportDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 

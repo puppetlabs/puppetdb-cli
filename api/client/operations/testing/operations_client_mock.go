@@ -66,6 +66,21 @@ func (mr *MockClientServiceMockRecorder) GetStatus(params, authInfo interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStatus", reflect.TypeOf((*MockClientService)(nil).GetStatus), params, authInfo)
 }
 
+// PostImport mocks base method
+func (m *MockClientService) PostImport(params *operations.PostImportParams, authInfo runtime.ClientAuthInfoWriter) (*operations.PostImportOK, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostImport", params, authInfo)
+	ret0, _ := ret[0].(*operations.PostImportOK)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PostImport indicates an expected call of PostImport
+func (mr *MockClientServiceMockRecorder) PostImport(params, authInfo interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostImport", reflect.TypeOf((*MockClientService)(nil).PostImport), params, authInfo)
+}
+
 // SetTransport mocks base method
 func (m *MockClientService) SetTransport(transport runtime.ClientTransport) {
 	m.ctrl.T.Helper()
