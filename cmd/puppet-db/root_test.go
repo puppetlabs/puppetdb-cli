@@ -1,21 +1,13 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/puppetlabs/puppetdb-cli/testdata"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
-
-func fixturePath() string {
-	path, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return filepath.Join(filepath.Dir(filepath.Dir(path)), "testdata")
-}
 
 func TestGlobalConfigFileAbsent(t *testing.T) {
 	assert := assert.New(t)
@@ -37,7 +29,7 @@ func TestCLIConfigFileAbsent(t *testing.T) {
 
 func TestCanReadAndAliasConfigParameters(t *testing.T) {
 	assert := assert.New(t)
-	initConfig(filepath.Join(fixturePath(), "puppetdb.conf"))
+	initConfig(filepath.Join(testdata.FixturePath(), "puppetdb.conf"))
 	registerConfigAliases()
 
 	assert.Equal([]string{"https://127.0.0.1:8080", "https://127.0.0.1:8081"}, viper.GetStringSlice("urls"))

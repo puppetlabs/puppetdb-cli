@@ -34,6 +34,7 @@ func init() {
 
 	rootCmd.Flags().BoolP("help", "h", false, "Show this screen.")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version.")
+
 	setCmdFlags(rootCmd)
 	registerConfigAliases()
 	bindConfigFlags(rootCmd)
@@ -186,7 +187,7 @@ func getGlobalConfigFile() (string, error) {
 		return puppetLabsDir, err
 	}
 
-	globalConfigFile := filepath.Join(puppetLabsDir, "client-tools", "puppet-code.conf")
+	globalConfigFile := filepath.Join(puppetLabsDir, "client-tools", "puppetdb.conf")
 	return globalConfigFile, nil
 }
 
@@ -240,6 +241,17 @@ func validateGlobalFlags(cmd *cobra.Command) error {
 	}
 	log.Debug(fmt.Sprintf("Log level changed to: %s", logLevel))
 
+	tokenFile, err := cmd.Flags().GetString("token")
+	if err != nil {
+		return err
+	}
+
+	if tokenFile == getDefaultToken() {
+		if _, err = os.Stat(tokenFile); err != nil {
+			cmd.Flags().Set("token", "")
+		}
+	}
+
 	cfgFile, err := cmd.Flags().GetString("config")
 	if err != nil {
 		return err
@@ -257,11 +269,11 @@ func registerConfigAliases() {
 }
 
 func bindConfigFlags(cmd *cobra.Command) {
-	viper.BindPFlag("urls", cmd.PersistentFlags().Lookup("urls"))
-	viper.BindPFlag("cacert", cmd.PersistentFlags().Lookup("cacert"))
-	viper.BindPFlag("cert", cmd.PersistentFlags().Lookup("cert"))
-	viper.BindPFlag("key", cmd.PersistentFlags().Lookup("key"))
-	viper.BindPFlag("token", cmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("puppetdb.server_urls", cmd.PersistentFlags().Lookup("urls"))
+	viper.BindPFlag("puppetdb.cacert", cmd.PersistentFlags().Lookup("cacert"))
+	viper.BindPFlag("puppetdb.cert", cmd.PersistentFlags().Lookup("cert"))
+	viper.BindPFlag("puppetdb.key", cmd.PersistentFlags().Lookup("key"))
+	viper.BindPFlag("puppetdb.token-file", cmd.PersistentFlags().Lookup("token"))
 }
 
 func getDefaultUrls() []string {

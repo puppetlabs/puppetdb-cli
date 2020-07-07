@@ -1,18 +1,17 @@
 package filetoken
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/puppetlabs/puppetdb-cli/testdata"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReadOK(t *testing.T) {
 	//arrange
 	test := assert.New(t)
-	root, _ := os.Getwd()
-	path := filepath.Join(root, "../../testdata/token")
+	path := filepath.Join(testdata.FixturePath(), "token")
 	fileToken := NewFileToken(path)
 
 	//act
