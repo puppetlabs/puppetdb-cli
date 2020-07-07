@@ -396,6 +396,7 @@
     "github.com/go-openapi/swag",
     "github.com/golang/mock/gomock",
     "github.com/puppetlabs/puppet-code/log",
+    "github.com/spf13/afero",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
