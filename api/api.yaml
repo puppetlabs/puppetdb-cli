@@ -25,6 +25,25 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/Error'
+  /pdb/admin/v1/archive:
+    get:
+      operationId: 'getExport'
+      parameters:
+        - in: query
+          name: anonymization_profile
+          type: string
+      produces:
+      - 'application/gzip'
+      responses:
+        200:
+          description: 'returns gzipped archive of puppetdb data'
+          schema:
+            description: 'puppetdb export'
+            type: file
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
 
 definitions:
   Error:

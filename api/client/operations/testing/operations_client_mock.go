@@ -5,6 +5,7 @@
 package mock_operations
 
 import (
+	io "io"
 	reflect "reflect"
 
 	runtime "github.com/go-openapi/runtime"
@@ -33,6 +34,21 @@ func NewMockClientService(ctrl *gomock.Controller) *MockClientService {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockClientService) EXPECT() *MockClientServiceMockRecorder {
 	return m.recorder
+}
+
+// GetExport mocks base method
+func (m *MockClientService) GetExport(params *operations.GetExportParams, authInfo runtime.ClientAuthInfoWriter, writer io.Writer) (*operations.GetExportOK, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExport", params, authInfo, writer)
+	ret0, _ := ret[0].(*operations.GetExportOK)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExport indicates an expected call of GetExport
+func (mr *MockClientServiceMockRecorder) GetExport(params, authInfo, writer interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExport", reflect.TypeOf((*MockClientService)(nil).GetExport), params, authInfo, writer)
 }
 
 // GetStatus mocks base method

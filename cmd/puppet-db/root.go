@@ -274,6 +274,7 @@ func bindConfigFlags(cmd *cobra.Command) {
 	viper.BindPFlag("puppetdb.cert", cmd.PersistentFlags().Lookup("cert"))
 	viper.BindPFlag("puppetdb.key", cmd.PersistentFlags().Lookup("key"))
 	viper.BindPFlag("puppetdb.token-file", cmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("anon", cmd.PersistentFlags().Lookup("anon"))
 }
 
 func getDefaultUrls() []string {
