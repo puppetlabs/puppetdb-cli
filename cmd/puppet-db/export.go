@@ -29,7 +29,8 @@ func init() {
 }
 
 func executeExportCommand(cmd *cobra.Command, args []string) {
-	anonymizationProfile := viper.GetString("anon")
+	anonymizationProfile, _ := cmd.Flags().GetString("anon")
+
 	url := viper.GetStringSlice("urls")[0]
 	filePath := args[0]
 
@@ -54,7 +55,7 @@ func executeExportCommand(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to export puppetdb data: %s", err.Error()))
 	} else {
-		log.Info(fmt.Sprintf("Wrote archive to \"%s\"", filePath))
+		fmt.Println("Wrote archive to \"", filePath, "\"")
 	}
 
 }
