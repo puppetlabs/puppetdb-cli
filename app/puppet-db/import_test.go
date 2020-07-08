@@ -3,10 +3,11 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/afero"
 
 	"github.com/puppetlabs/puppetdb-cli/api/client"
 	"github.com/puppetlabs/puppetdb-cli/api/client/operations"
@@ -21,6 +22,7 @@ import (
 
 func TestRunImportFailsIfNoClient(t *testing.T) {
 	assert := assert.New(t)
+	filePath := "import.tar.gz"
 	errorMessage := "No client"
 
 	ctrl := gomock.NewController(t)
@@ -36,14 +38,14 @@ func TestRunImportFailsIfNoClient(t *testing.T) {
 	puppetDb.Token = token
 	puppetDb.Client = api
 
-	_, receivedError := puppetDb.PostImportFile("import.tar.gz")
+	_, receivedError := puppetDb.PostImportFile(filePath)
 	assert.EqualError(receivedError, errorMessage)
 }
 
 func TestRunImportFailsIfFileIsAbsent(t *testing.T) {
-	appFS = afero.NewMemMapFs()
 	assert := assert.New(t)
-	errorMessage := "open import.tar.gz: file does not exist"
+	filePath := "import.tar.gz"
+	errorMessage := fmt.Sprintf("open %s: file does not exist", filePath)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -58,21 +60,21 @@ func TestRunImportFailsIfFileIsAbsent(t *testing.T) {
 	api.EXPECT().GetClient().Return(client, nil)
 	token.EXPECT().Read().Return("my token", nil)
 
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+	fsmock.EXPECT().Open(filePath).Return(nil, errors.New(errorMessage))
+
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
 
-	_, receivedError := puppetDb.PostImportFile("import.tar.gz")
+	_, receivedError := puppetDb.PostImportFile(filePath)
 	assert.EqualError(receivedError, errorMessage, "Importing an absent file should fail")
 }
 
 func TestRunImportSuccess(t *testing.T) {
-	filePath = "import.tar.gz"
-	appFS = afero.NewMemMapFs()
-	appFS.Create(filePath)
-	archive, _ := appFS.Open(filePath)
-
 	assert := assert.New(t)
+	filePath := "import.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -91,6 +93,11 @@ func TestRunImportSuccess(t *testing.T) {
 		Payload: resp,
 	}
 
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+	archive := os.NewFile(0, filePath)
+	fsmock.EXPECT().Open(filePath).Return(archive, nil)
+
 	postImportParameters := operations.NewPostImportParamsWithContext(context.Background())
 	postImportParameters.SetArchive(archive)
 	operationsMock.EXPECT().PostImport(postImportParameters, match.XAuthenticationWriter(t, "my token")).Return(result, nil)
@@ -104,12 +111,8 @@ func TestRunImportSuccess(t *testing.T) {
 }
 
 func TestRunImportError(t *testing.T) {
-	filePath = "import.tar.gz"
-	appFS = afero.NewMemMapFs()
-	appFS.Create(filePath)
-	archive, _ := appFS.Open(filePath)
-
 	assert := assert.New(t)
+	filePath := "import.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -128,6 +131,12 @@ func TestRunImportError(t *testing.T) {
 		Msg:     "error message",
 		Details: "details",
 	}
+
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+
+	archive := os.NewFile(0, filePath)
+	fsmock.EXPECT().Open(filePath).Return(archive, nil)
 
 	postImportParameters := operations.NewPostImportParamsWithContext(context.Background())
 	postImportParameters.SetArchive(archive)

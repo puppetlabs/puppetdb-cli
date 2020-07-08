@@ -3,13 +3,11 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
-	"path/filepath"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/afero"
 
 	"github.com/puppetlabs/puppetdb-cli/api/client"
 	"github.com/puppetlabs/puppetdb-cli/api/client/operations"
@@ -22,10 +20,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var filePath string = "/path/to/export.tar.gz"
-
 func TestRunExportFailsIfNoClient(t *testing.T) {
 	assert := assert.New(t)
+	filePath := "export.tar.gz"
 	errorMessage := "No client"
 
 	ctrl := gomock.NewController(t)
@@ -37,16 +34,16 @@ func TestRunExportFailsIfNoClient(t *testing.T) {
 	token.EXPECT().Read().Return("my token", nil)
 	api.EXPECT().GetClient().Return(nil, errors.New(errorMessage))
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	_, receivedError := puppetCode.GetExportFile(filePath, "none")
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	_, receivedError := puppetDb.GetExportFile(filePath, "none")
 	assert.EqualError(receivedError, errorMessage)
 }
 
 func TestRunExportFailsIfFileCreationFails(t *testing.T) {
-	appFS = afero.NewReadOnlyFs(afero.NewMemMapFs())
 	assert := assert.New(t)
+	filePath := "export.tar.gz"
 	errorMessage := "operation not permitted"
 
 	ctrl := gomock.NewController(t)
@@ -62,16 +59,20 @@ func TestRunExportFailsIfFileCreationFails(t *testing.T) {
 	api.EXPECT().GetClient().Return(client, nil)
 	token.EXPECT().Read().Return("my token", nil)
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	_, receivedError := puppetCode.GetExportFile(filePath, "none")
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+	fsmock.EXPECT().Create(filePath).Return(nil, errors.New(errorMessage))
+
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	_, receivedError := puppetDb.GetExportFile(filePath, "none")
 	assert.EqualError(receivedError, errorMessage, "Archive file creation should fail")
 }
 
 func TestRunExportSucces(t *testing.T) {
-	appFS = afero.NewMemMapFs()
 	assert := assert.New(t)
+	filePath := "export.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -90,25 +91,27 @@ func TestRunExportSucces(t *testing.T) {
 		Payload: mockPayload,
 	}
 
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+	archive := os.NewFile(0, filePath)
+	fsmock.EXPECT().Create(filePath).Return(archive, nil)
+
 	getExportParameters := operations.NewGetExportParamsWithContext(context.Background())
 	anon := "none"
 	getExportParameters.SetAnonymizationProfile(&anon)
-	operationsMock.EXPECT().GetExport(getExportParameters, match.XAuthenticationWriter(t, "my token"), gomock.Any()).Return(result, nil)
+	operationsMock.EXPECT().GetExport(getExportParameters, match.XAuthenticationWriter(t, "my token"), archive).Return(result, nil)
 
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
 
 	_, err := puppetDb.GetExportFile(filePath, "none")
-	_, stat := appFS.Stat(filePath)
-
 	assert.NoError(err)
-	assert.NoError(stat, "archive file should be created")
 }
 
 func TestRunExportError(t *testing.T) {
-	appFS = afero.NewMemMapFs()
 	assert := assert.New(t)
+	filePath := "export.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -128,20 +131,22 @@ func TestRunExportError(t *testing.T) {
 		Details: "details",
 	}
 
+	fsmock := match.NewMockFs(ctrl)
+	appFS = fsmock
+	archive := os.NewFile(0, filePath)
+	fsmock.EXPECT().Create(filePath).Return(archive, nil)
+	fsmock.EXPECT().Remove(filePath).Return(nil)
+
 	getExportParameters := operations.NewGetExportParamsWithContext(context.Background())
 	anon := "none"
 	getExportParameters.SetAnonymizationProfile(&anon)
 	operationsMock.EXPECT().GetExport(getExportParameters, match.XAuthenticationWriter(t, "my token"), gomock.Any()).Return(nil, result)
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	res, err := puppetCode.GetExportFile("/tmp/archive.tar.gz", "none")
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	res, err := puppetDb.GetExportFile(filePath, "none")
 
 	assert.Nil(res)
 	assert.EqualError(err, "[GET /pdb/admin/v1/archive][404] getExport default  &{Details:details Kind: Msg:error message}")
-
-	_, stat := appFS.Stat(filePath)
-	expectedMessage := fmt.Sprintf("open %s: file does not exist", filepath.Join(filePath))
-	assert.EqualError(stat, expectedMessage, "GetExportFile should clean up if API call fails")
 }

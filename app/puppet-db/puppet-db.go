@@ -4,7 +4,10 @@ import (
 	"github.com/puppetlabs/puppetdb-cli/api"
 	"github.com/puppetlabs/puppetdb-cli/token"
 	"github.com/puppetlabs/puppetdb-cli/token/filetoken"
+	"github.com/spf13/afero"
 )
+
+var appFS = afero.NewOsFs()
 
 // PuppetDb interface
 type PuppetDb struct {
