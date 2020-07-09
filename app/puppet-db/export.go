@@ -10,8 +10,6 @@ import (
 	httptransport "github.com/go-openapi/runtime/client"
 )
 
-var appFS = afero.NewOsFs()
-
 // createExportFile creates a file object from a provided path
 func (puppetDb *PuppetDb) createExportFile(filePath string) (afero.File, error) {
 	file, err := appFS.Create(filePath)

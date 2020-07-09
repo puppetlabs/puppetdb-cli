@@ -31,10 +31,10 @@ func TestRunStatusFailsIfNoClient(t *testing.T) {
 	token.EXPECT().Read().Return("my token", nil)
 	api.EXPECT().GetClient().Return(nil, errors.New(errorMessage))
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	_, receivedError := puppetCode.GetStatus()
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	_, receivedError := puppetDb.GetStatus()
 	assert.EqualError(receivedError, errorMessage)
 }
 
@@ -60,10 +60,10 @@ func TestRunStatusSucces(t *testing.T) {
 	getStatusParameters := operations.NewGetStatusParamsWithContext(context.Background())
 	operationsMock.EXPECT().GetStatus(getStatusParameters, match.XAuthenticationWriter(t, "my token")).Return(result, nil)
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	res, err := puppetCode.GetStatus()
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	res, err := puppetDb.GetStatus()
 
 	assert.Equal("ok", res.Payload)
 	assert.Nil(err)
@@ -93,10 +93,10 @@ func TestRunStatusError(t *testing.T) {
 	getStatusParameters := operations.NewGetStatusParamsWithContext(context.Background())
 	operationsMock.EXPECT().GetStatus(getStatusParameters, match.XAuthenticationWriter(t, "my token")).Return(nil, result)
 
-	puppetCode := New()
-	puppetCode.Token = token
-	puppetCode.Client = api
-	res, err := puppetCode.GetStatus()
+	puppetDb := New()
+	puppetDb.Token = token
+	puppetDb.Client = api
+	res, err := puppetDb.GetStatus()
 
 	assert.Nil(res)
 	assert.EqualError(err, "[GET /status/v1/services][404] getStatus default  &{Details:details Kind: Msg:error message}")

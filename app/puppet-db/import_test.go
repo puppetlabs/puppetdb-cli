@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"errors"
-	"io"
+	"fmt"
 	"os"
 	"testing"
 
@@ -20,9 +20,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRunExportFailsIfNoClient(t *testing.T) {
+func TestRunImportFailsIfNoClient(t *testing.T) {
 	assert := assert.New(t)
-	filePath := "export.tar.gz"
+	filePath := "import.tar.gz"
 	errorMessage := "No client"
 
 	ctrl := gomock.NewController(t)
@@ -37,14 +37,15 @@ func TestRunExportFailsIfNoClient(t *testing.T) {
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
-	_, receivedError := puppetDb.GetExportFile(filePath, "none")
+
+	_, receivedError := puppetDb.PostImportFile(filePath)
 	assert.EqualError(receivedError, errorMessage)
 }
 
-func TestRunExportFailsIfFileCreationFails(t *testing.T) {
+func TestRunImportFailsIfFileIsAbsent(t *testing.T) {
 	assert := assert.New(t)
-	filePath := "export.tar.gz"
-	errorMessage := "operation not permitted"
+	filePath := "import.tar.gz"
+	errorMessage := fmt.Sprintf("open %s: file does not exist", filePath)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -61,18 +62,19 @@ func TestRunExportFailsIfFileCreationFails(t *testing.T) {
 
 	fsmock := match.NewMockFs(ctrl)
 	appFS = fsmock
-	fsmock.EXPECT().Create(filePath).Return(nil, errors.New(errorMessage))
+	fsmock.EXPECT().Open(filePath).Return(nil, errors.New(errorMessage))
 
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
-	_, receivedError := puppetDb.GetExportFile(filePath, "none")
-	assert.EqualError(receivedError, errorMessage, "Archive file creation should fail")
+
+	_, receivedError := puppetDb.PostImportFile(filePath)
+	assert.EqualError(receivedError, errorMessage, "Importing an absent file should fail")
 }
 
-func TestRunExportSucces(t *testing.T) {
+func TestRunImportSuccess(t *testing.T) {
 	assert := assert.New(t)
-	filePath := "export.tar.gz"
+	filePath := "import.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -86,32 +88,31 @@ func TestRunExportSucces(t *testing.T) {
 	api.EXPECT().GetClient().Return(client, nil)
 	token.EXPECT().Read().Return("my token", nil)
 
-	var mockPayload io.Writer
-	result := &operations.GetExportOK{
-		Payload: mockPayload,
+	resp := operations.NewPostImportOK().Payload
+	result := &operations.PostImportOK{
+		Payload: resp,
 	}
 
 	fsmock := match.NewMockFs(ctrl)
 	appFS = fsmock
 	archive := os.NewFile(0, filePath)
-	fsmock.EXPECT().Create(filePath).Return(archive, nil)
+	fsmock.EXPECT().Open(filePath).Return(archive, nil)
 
-	getExportParameters := operations.NewGetExportParamsWithContext(context.Background())
-	anon := "none"
-	getExportParameters.SetAnonymizationProfile(&anon)
-	operationsMock.EXPECT().GetExport(getExportParameters, match.XAuthenticationWriter(t, "my token"), archive).Return(result, nil)
+	postImportParameters := operations.NewPostImportParamsWithContext(context.Background())
+	postImportParameters.SetArchive(archive)
+	operationsMock.EXPECT().PostImport(postImportParameters, match.XAuthenticationWriter(t, "my token")).Return(result, nil)
 
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
 
-	_, err := puppetDb.GetExportFile(filePath, "none")
+	_, err := puppetDb.PostImportFile(filePath)
 	assert.NoError(err)
 }
 
-func TestRunExportError(t *testing.T) {
+func TestRunImportError(t *testing.T) {
 	assert := assert.New(t)
-	filePath := "export.tar.gz"
+	filePath := "import.tar.gz"
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -125,7 +126,7 @@ func TestRunExportError(t *testing.T) {
 	api.EXPECT().GetClient().Return(client, nil)
 	token.EXPECT().Read().Return("my token", nil)
 
-	result := operations.NewGetExportDefault(404)
+	result := operations.NewPostImportDefault(404)
 	result.Payload = &models.Error{
 		Msg:     "error message",
 		Details: "details",
@@ -133,20 +134,19 @@ func TestRunExportError(t *testing.T) {
 
 	fsmock := match.NewMockFs(ctrl)
 	appFS = fsmock
-	archive := os.NewFile(0, filePath)
-	fsmock.EXPECT().Create(filePath).Return(archive, nil)
-	fsmock.EXPECT().Remove(filePath).Return(nil)
 
-	getExportParameters := operations.NewGetExportParamsWithContext(context.Background())
-	anon := "none"
-	getExportParameters.SetAnonymizationProfile(&anon)
-	operationsMock.EXPECT().GetExport(getExportParameters, match.XAuthenticationWriter(t, "my token"), gomock.Any()).Return(nil, result)
+	archive := os.NewFile(0, filePath)
+	fsmock.EXPECT().Open(filePath).Return(archive, nil)
+
+	postImportParameters := operations.NewPostImportParamsWithContext(context.Background())
+	postImportParameters.SetArchive(archive)
+	operationsMock.EXPECT().PostImport(postImportParameters, match.XAuthenticationWriter(t, "my token")).Return(nil, result)
 
 	puppetDb := New()
 	puppetDb.Token = token
 	puppetDb.Client = api
-	res, err := puppetDb.GetExportFile(filePath, "none")
 
+	res, err := puppetDb.PostImportFile(filePath)
 	assert.Nil(res)
-	assert.EqualError(err, "[GET /pdb/admin/v1/archive][404] getExport default  &{Details:details Kind: Msg:error message}")
+	assert.EqualError(err, "[POST /pdb/admin/v1/archive][404] postImport default  &{Details:details Kind: Msg:error message}")
 }

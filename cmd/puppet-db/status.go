@@ -6,7 +6,6 @@ import (
 	"github.com/puppetlabs/puppetdb-cli/api"
 	app "github.com/puppetlabs/puppetdb-cli/app/puppet-db"
 	"github.com/puppetlabs/puppetdb-cli/json"
-	"github.com/puppetlabs/puppetdb-cli/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -17,14 +16,14 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "status",
 	Long:  "status",
-	Run:   executeStatusCommand,
+	RunE:  executeStatusCommand,
 }
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
 }
 
-func executeStatusCommand(cmd *cobra.Command, args []string) {
+func executeStatusCommand(cmd *cobra.Command, args []string) error {
 	result := make(map[string]interface{})
 
 	for _, url := range viper.GetStringSlice("urls") {
@@ -37,9 +36,8 @@ func executeStatusCommand(cmd *cobra.Command, args []string) {
 
 		resp, err := puppetDb.GetStatus()
 
-		if e, ok := err.(*api.ArgError); ok {
-			log.Error(e.Error())
-			os.Exit(1)
+		if _, ok := err.(*api.ArgError); ok {
+			return err
 		}
 
 		if err != nil {
@@ -51,4 +49,5 @@ func executeStatusCommand(cmd *cobra.Command, args []string) {
 		}
 	}
 	json.WritePayload(os.Stdout, result)
+	return nil
 }
