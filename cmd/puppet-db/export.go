@@ -21,14 +21,14 @@ var exportCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: executeExportCommand,
+	RunE: executeExportCommand,
 }
 
 func init() {
 	rootCmd.AddCommand(exportCmd)
 }
 
-func executeExportCommand(cmd *cobra.Command, args []string) {
+func executeExportCommand(cmd *cobra.Command, args []string) error {
 	anonymizationProfile, _ := cmd.Flags().GetString("anon")
 
 	url := viper.GetStringSlice("urls")[0]
@@ -47,15 +47,14 @@ func executeExportCommand(cmd *cobra.Command, args []string) {
 
 	_, err := puppetDb.GetExportFile(filePath, anonymizationProfile)
 
-	if e, ok := err.(*api.ArgError); ok {
-		log.Error(e.Error())
-		os.Exit(1)
+	if _, ok := err.(*api.ArgError); ok {
+		return err
 	}
 
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to export puppetdb data: %s", err.Error()))
-	} else {
-		fmt.Println("Wrote archive to \"", filePath, "\"")
+		os.Exit(1)
 	}
-
+	fmt.Println("Wrote archive to \"", filePath, "\"")
+	return nil
 }

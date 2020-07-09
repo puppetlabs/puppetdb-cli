@@ -21,14 +21,14 @@ var importCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Run: executeImportCommand,
+	RunE: executeImportCommand,
 }
 
 func init() {
 	rootCmd.AddCommand(importCmd)
 }
 
-func executeImportCommand(cmd *cobra.Command, args []string) {
+func executeImportCommand(cmd *cobra.Command, args []string) error {
 	url := viper.GetStringSlice("urls")[0]
 	filePath := args[0]
 
@@ -45,18 +45,17 @@ func executeImportCommand(cmd *cobra.Command, args []string) {
 
 	resp, err := puppetDb.PostImportFile(filePath)
 
-	if e, ok := err.(*api.ArgError); ok {
-		log.Error(e.Error())
-		os.Exit(1)
+	if _, ok := err.(*api.ArgError); ok {
+		return err
 	}
 
 	if err != nil {
 		log.Error(fmt.Sprintf("Failed to import puppetdb data: %s", err.Error()))
 		os.Exit(1)
-	} else {
-		if !resp.Payload.Ok {
-			log.Warn(fmt.Sprintf("API returned 200, but got 'ok: %t' instead of true", resp.Payload.Ok))
-		}
-		log.Info(fmt.Sprintf("Successfully imported \"%s\"", filePath))
 	}
+	if !resp.Payload.Ok {
+		log.Warn(fmt.Sprintf("API returned 200, but got 'ok: %t' instead of true", resp.Payload.Ok))
+	}
+	log.Info(fmt.Sprintf("Successfully imported \"%s\"", filePath))
+	return nil
 }

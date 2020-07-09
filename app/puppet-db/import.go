@@ -30,7 +30,5 @@ func (puppetDb *PuppetDb) PostImportFile(filePath string) (*operations.PostImpor
 	postImportParameters := operations.NewPostImportParamsWithContext(context.Background())
 	postImportParameters.SetArchive(file)
 
-	result, err := client.Operations.PostImport(postImportParameters, apiKeyHeaderAuth)
-
-	return result, err
+	return client.Operations.PostImport(postImportParameters, apiKeyHeaderAuth)
 }
