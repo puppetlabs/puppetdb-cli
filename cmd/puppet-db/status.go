@@ -4,7 +4,8 @@ import (
 	"os"
 
 	"github.com/puppetlabs/puppetdb-cli/api"
-	app "github.com/puppetlabs/puppetdb-cli/app/puppet-db"
+	"github.com/puppetlabs/puppetdb-cli/app"
+	"github.com/puppetlabs/puppetdb-cli/cmd"
 	"github.com/puppetlabs/puppetdb-cli/json"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,7 +21,7 @@ var statusCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(statusCmd)
+	cmd.RootCmd.AddCommand(statusCmd)
 }
 
 func executeStatusCommand(cmd *cobra.Command, args []string) error {
@@ -48,6 +49,7 @@ func executeStatusCommand(cmd *cobra.Command, args []string) error {
 			result[url] = resp.GetPayload()
 		}
 	}
+	//FIXME if all are errors, we should return 1
 	json.WritePayload(os.Stdout, result)
 	return nil
 }

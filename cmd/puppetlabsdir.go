@@ -1,6 +1,6 @@
 // +build darwin linux
 
-package main
+package cmd
 
 // PuppetLabsDir return puppetlabs dir
 func PuppetLabsDir() (string, error) {

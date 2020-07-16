@@ -6,7 +6,8 @@ import (
 	"os"
 
 	"github.com/puppetlabs/puppetdb-cli/api"
-	app "github.com/puppetlabs/puppetdb-cli/app/puppet-db"
+	"github.com/puppetlabs/puppetdb-cli/app"
+	"github.com/puppetlabs/puppetdb-cli/cmd"
 	"github.com/puppetlabs/puppetdb-cli/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,7 +26,7 @@ var exportCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(exportCmd)
+	cmd.RootCmd.AddCommand(exportCmd)
 }
 
 func executeExportCommand(cmd *cobra.Command, args []string) error {

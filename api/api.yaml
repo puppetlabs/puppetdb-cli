@@ -69,6 +69,30 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/Error'
+  /pdb/query/v4:
+    get:
+      operationId: 'getQuery'
+      parameters:
+        - in: query
+          name: query
+          type: string
+      produces:
+      - 'application/json'
+      responses:
+        200:
+          description: 'returns query response'
+          schema:
+            description: 'query response'
+            type: object
+        400:
+          description: PQL parse error response
+          schema:
+            description: 'PQL parse error'
+            type: string
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
 
 definitions:
   Error:

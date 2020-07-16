@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -o errexit
 
@@ -9,5 +9,6 @@ GIT_ROOT=${GIT_ROOT:-$(git rev-parse --show-toplevel)}
 printf "%b==> Generating mocks %b\n" "${OK_COLOR}" "${ERROR_COLOR}"
 
 pushd token/testing && mockgen --source ../token.go --destination=token_mock.go && popd
+pushd api/client/operations/testing && mockgen --source ../operations_client.go --destination=operations_client_mock.go && popd
 
 printf "%b" "${NO_COLOR}"
