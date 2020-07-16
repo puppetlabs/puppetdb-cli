@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"bufio"
@@ -15,10 +15,9 @@ import (
 )
 
 var (
-	urls    []string
-	rootCmd = &cobra.Command{
-		Use:   "puppet-db [flags] [options]",
-		Short: "puppet-db.",
+	urls []string
+	//RootCmd if the common root command
+	RootCmd = &cobra.Command{
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			return validateGlobalFlags(cmd)
 		},
@@ -26,19 +25,19 @@ var (
 )
 
 func init() {
-	rootCmd.Flags().SortFlags = false
-	rootCmd.SetHelpCommand(&cobra.Command{
+	RootCmd.Flags().SortFlags = false
+	RootCmd.SetHelpCommand(&cobra.Command{
 		Use:    "no-help",
 		Hidden: true,
 	})
 
-	rootCmd.Flags().BoolP("help", "h", false, "Show this screen.")
-	rootCmd.Flags().BoolP("version", "v", false, "Show version.")
+	RootCmd.Flags().BoolP("help", "h", false, "Show this screen.")
+	RootCmd.Flags().BoolP("version", "v", false, "Show version.")
 
-	setCmdFlags(rootCmd)
+	setCmdFlags(RootCmd)
 	registerConfigAliases()
-	bindConfigFlags(rootCmd)
-	customizeUsage(rootCmd)
+	bindConfigFlags(RootCmd)
+	customizeUsage(RootCmd)
 }
 
 func customizeUsage(cmd *cobra.Command) {
@@ -46,7 +45,7 @@ func customizeUsage(cmd *cobra.Command) {
 
 	usageTemplate := cmd.UsageTemplate()
 	usageTemplate = strings.ReplaceAll(usageTemplate, ".FlagUsages", ".FlagUsages | enhanceFlagUsages")
-	rootCmd.SetUsageTemplate(usageTemplate)
+	RootCmd.SetUsageTemplate(usageTemplate)
 }
 
 func enhanceFlagUsages(s string) string {
@@ -106,8 +105,8 @@ func lowerValue(s string) string {
 
 // Execute will start command line parsing
 func Execute(version string) error {
-	rootCmd.Version = version
-	return rootCmd.Execute()
+	RootCmd.Version = version
+	return RootCmd.Execute()
 }
 
 func setCmdFlags(cmd *cobra.Command) {

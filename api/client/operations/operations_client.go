@@ -29,6 +29,8 @@ type Client struct {
 type ClientService interface {
 	GetExport(params *GetExportParams, authInfo runtime.ClientAuthInfoWriter, writer io.Writer) (*GetExportOK, error)
 
+	GetQuery(params *GetQueryParams, authInfo runtime.ClientAuthInfoWriter) (*GetQueryOK, error)
+
 	GetStatus(params *GetStatusParams, authInfo runtime.ClientAuthInfoWriter) (*GetStatusOK, error)
 
 	PostImport(params *PostImportParams, authInfo runtime.ClientAuthInfoWriter) (*PostImportOK, error)
@@ -67,6 +69,40 @@ func (a *Client) GetExport(params *GetExportParams, authInfo runtime.ClientAuthI
 	}
 	// unexpected success response
 	unexpectedSuccess := result.(*GetExportDefault)
+	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
+}
+
+/*
+  GetQuery get query API
+*/
+func (a *Client) GetQuery(params *GetQueryParams, authInfo runtime.ClientAuthInfoWriter) (*GetQueryOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetQueryParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "getQuery",
+		Method:             "GET",
+		PathPattern:        "/pdb/query/v4",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &GetQueryReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*GetQueryOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	unexpectedSuccess := result.(*GetQueryDefault)
 	return nil, runtime.NewAPIError("unexpected success response: content available as default response in error", unexpectedSuccess, unexpectedSuccess.Code())
 }
 

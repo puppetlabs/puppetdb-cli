@@ -12,7 +12,7 @@ import (
 	mock_operations "github.com/puppetlabs/puppetdb-cli/api/client/operations/testing"
 	"github.com/puppetlabs/puppetdb-cli/api/models"
 	mock_api "github.com/puppetlabs/puppetdb-cli/api/testing"
-	match "github.com/puppetlabs/puppetdb-cli/app/puppet-db/testing"
+	match "github.com/puppetlabs/puppetdb-cli/app/testing"
 	mock_token "github.com/puppetlabs/puppetdb-cli/token/testing"
 
 	"github.com/stretchr/testify/assert"
