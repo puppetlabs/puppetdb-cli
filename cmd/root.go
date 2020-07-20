@@ -240,22 +240,22 @@ func validateGlobalFlags(cmd *cobra.Command) error {
 	}
 	log.Debug(fmt.Sprintf("Log level changed to: %s", logLevel))
 
-	tokenFile, err := cmd.Flags().GetString("token")
+	cfgFile, err := cmd.Flags().GetString("config")
 	if err != nil {
 		return err
 	}
+	initConfig(cfgFile)
 
+	// If the token file path is the default path, and the file does
+	// not exist, unset the flag. This is in line with the rust
+	// behavior.
+	tokenFile := viper.GetString("token")
 	if tokenFile == getDefaultToken() {
 		if _, err = os.Stat(tokenFile); err != nil {
 			cmd.Flags().Set("token", "")
 		}
 	}
 
-	cfgFile, err := cmd.Flags().GetString("config")
-	if err != nil {
-		return err
-	}
-	initConfig(cfgFile)
 	return nil
 }
 
