@@ -246,13 +246,19 @@ func validateGlobalFlags(cmd *cobra.Command) error {
 	}
 	initConfig(cfgFile)
 
-	// If the token file path is the default path, and the file does
-	// not exist, unset the flag. This is in line with the rust
-	// behavior.
+	// If the user did not supply a token file, and the default file
+	// does not exist, unset the flag. This is in line with the rust
+	// behavior. Otherwise, if a user-supplied file does not exist, we
+	// error out.
 	tokenFile := viper.GetString("token")
-	if tokenFile == getDefaultToken() {
+	if tokenFile != "" {
 		if _, err = os.Stat(tokenFile); err != nil {
-			cmd.Flags().Set("token", "")
+			if !cmd.Flags().Changed("token") {
+				cmd.Flags().Set("token", "")
+			} else {
+				log.Error(fmt.Sprintf("Cannot open token file: %s", err.Error()))
+				os.Exit(1)
+			}
 		}
 	}
 
