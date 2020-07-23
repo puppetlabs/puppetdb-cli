@@ -47,19 +47,26 @@ task :acceptance do
   pre_suite = ENV["BEAKER_PRESUITE"] || "#{type}/setup/pre_suite"
   opts = ENV["BEAKER_OPTS"] || ''
 
-  beaker = "bundle exec beaker "
-  beaker += " --xml"
-  beaker += " --debug"
-  beaker += " --no-color"
-  beaker += " --repo-proxy"
-  beaker += " --config #{config}" if config != ''
-  beaker += " --preserve-hosts #{preserve_hosts}" if preserve_hosts != ''
-  beaker += " --type #{type}" if type != ''
-  beaker += " --keyfile #{keyfile}" if keyfile != ''
-  beaker += " --tests #{test_suite}" if test_suite != ''
-  beaker += " --pre-suite #{pre_suite}" if pre_suite != ''
-  beaker += " #{opts}" if opts != ''
-  sh beaker
+  fail "PE_FAMILY must be set in order to run acceptance with Puppet Enterprise" if !ENV['PE_FAMILY'] && type == 'pe'
+
+  init = "bundle exec beaker init"
+  init += " --xml"
+  init += " --debug"
+  init += " --no-color"
+  init += " --repo-proxy"
+  init += " --hosts #{config}" if config != ''
+  init += " --preserve-hosts #{preserve_hosts}" if preserve_hosts != ''
+  init += " --type #{type}" if type != ''
+  init += " --keyfile #{keyfile}" if keyfile != ''
+  init += " --tests #{test_suite}" if test_suite != ''
+  init += " --pre-suite #{pre_suite}" if pre_suite != ''
+  init += " #{opts}" if opts != ''
+  sh init
+
+  sh "bundle exec beaker provision"
+  sh "bundle exec beaker exec pre-suite"
+  sh "bundle exec beaker exec tests"
+  sh "bundle exec beaker destroy"
 end
 
 namespace :ci do
