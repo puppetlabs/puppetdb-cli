@@ -35,6 +35,12 @@ func (o *GetQueryReader) ReadResponse(response runtime.ClientResponse, consumer 
 			return nil, err
 		}
 		return nil, result
+	case 403:
+		result := NewGetQueryForbidden()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewGetQueryDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -100,6 +106,37 @@ func (o *GetQueryBadRequest) GetPayload() string {
 }
 
 func (o *GetQueryBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// response payload
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewGetQueryForbidden creates a GetQueryForbidden with default headers values
+func NewGetQueryForbidden() *GetQueryForbidden {
+	return &GetQueryForbidden{}
+}
+
+/*GetQueryForbidden handles this case with default header values.
+
+Permission denied response
+*/
+type GetQueryForbidden struct {
+	Payload string
+}
+
+func (o *GetQueryForbidden) Error() string {
+	return fmt.Sprintf("[GET /pdb/query/v4][%d] getQueryForbidden  %+v", 403, o.Payload)
+}
+
+func (o *GetQueryForbidden) GetPayload() string {
+	return o.Payload
+}
+
+func (o *GetQueryForbidden) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	// response payload
 	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
