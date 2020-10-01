@@ -89,6 +89,11 @@ paths:
           schema:
             description: 'PQL parse error'
             type: string
+        403:
+          description: Permission denied response
+          schema:
+            description: 'Permission denied'
+            type: string
         default:
           description: Unexpected error
           schema:
