@@ -94,6 +94,10 @@ paths:
           schema:
             description: 'Permission denied'
             type: string
+        500:
+          description: Server error
+          schema:
+            $ref: '#/definitions/ServerError'
         default:
           description: Unexpected error
           schema:
@@ -109,3 +113,14 @@ definitions:
         type: string
       details:
         type: object
+  ServerError:
+    type: object
+    properties:
+      cause0:
+        type: string
+      message:
+        type: string
+      url:
+        type: string
+      status:
+        type: string
