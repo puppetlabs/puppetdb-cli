@@ -41,6 +41,12 @@ func (o *GetQueryReader) ReadResponse(response runtime.ClientResponse, consumer 
 			return nil, err
 		}
 		return nil, result
+	case 500:
+		result := NewGetQueryInternalServerError()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
 	default:
 		result := NewGetQueryDefault(response.Code())
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -140,6 +146,39 @@ func (o *GetQueryForbidden) readResponse(response runtime.ClientResponse, consum
 
 	// response payload
 	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewGetQueryInternalServerError creates a GetQueryInternalServerError with default headers values
+func NewGetQueryInternalServerError() *GetQueryInternalServerError {
+	return &GetQueryInternalServerError{}
+}
+
+/*GetQueryInternalServerError handles this case with default header values.
+
+Server error
+*/
+type GetQueryInternalServerError struct {
+	Payload *models.ServerError
+}
+
+func (o *GetQueryInternalServerError) Error() string {
+	return fmt.Sprintf("[GET /pdb/query/v4][%d] getQueryInternalServerError  %+v", 500, o.Payload)
+}
+
+func (o *GetQueryInternalServerError) GetPayload() *models.ServerError {
+	return o.Payload
+}
+
+func (o *GetQueryInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.ServerError)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 

@@ -18,10 +18,16 @@ func (puppetDb *PuppetDb) QueryWithErrorDetails(args string) (*operations.GetQue
 
 	resp, err := puppetDb.query(args)
 	if err != nil {
+		if du, ok := err.(*operations.GetQueryInternalServerError); ok {
+			if du.Payload != nil {
+				log.Debug(err.Error())
+				err = fmt.Errorf("[GET /pdb/query/v4][500] getQuery ServerError: %+v", puppetdbjson.PrettyPrintPayload(du.Payload))
+			}
+		}
 		if du, ok := err.(*operations.GetQueryDefault); ok {
 			if du.Payload != nil {
 				log.Debug(err.Error())
-				err = fmt.Errorf("[GET /pdb/query/v4][%d] getQuery default  %+v\n%v", du.Code(), du.Payload.Msg, puppetdbjson.PrettyPrintPayload(du.Payload.Details))
+				err = fmt.Errorf("[GET /pdb/query/v4][%d] getQuery default: %+v\n%v", du.Code(), du.Payload.Msg, puppetdbjson.PrettyPrintPayload(du.Payload.Details))
 			}
 		}
 	}
