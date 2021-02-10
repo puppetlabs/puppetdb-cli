@@ -87,7 +87,17 @@ func getHTTPClient(cacert, cert, key string) (*http.Client, error) {
 		Certificate: cert,
 		Key:         key,
 	}
-	return openapihttptransport.TLSClient(tlsClientOptions)
+	cfg, err := openapihttptransport.TLSClientAuth(tlsClientOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	transport := &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: cfg,
+	}
+
+	return &http.Client{Transport: transport}, nil
 }
 
 func newOpenAPITransport(url url.URL, httpclient *http.Client) *openapihttptransport.Runtime {
