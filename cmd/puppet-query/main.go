@@ -16,6 +16,8 @@ func init() {
 }
 
 func main() {
+	os.Setenv("GODEBUG", "x509ignoreCN=0")
+
 	if err := cmd.Execute(Version); err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
