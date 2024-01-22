@@ -1,7 +1,6 @@
 # puppetdb-cli
 
-> **Note**: This repository is still under active development. Stay tuned for
-> release dates and functionality changes.
+> ⚠️ This repo has been superseded by https://github.com/puppetlabs/pe-cli
 
 The PuppetDB CLI project provide Puppet subcommands for querying PuppetDB data,
 via `puppet query <query>`, and PuppetDB administrative tasks, `puppet db
